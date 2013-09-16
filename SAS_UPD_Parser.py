@@ -5,7 +5,7 @@ http://stackoverflow.com/questions/1093598/pyserial-how-to-read-last-line-sent-f
 """
 from threading import Thread
 import time
-import serial
+import socket
 import datetime
 import numpy as np
 
@@ -29,47 +29,26 @@ def receiving(ser):
             buffer = lines[-1]
 
 
-class SerialData(object):
+class UPDReceiver(object):
     def __init__(self, init=50):
-        try:
-            self.ser = ser = serial.Serial(
-                port='/dev/tty.usbmodem1411',
-                baudrate=9600,
-                bytesize=serial.EIGHTBITS,
-                parity=serial.PARITY_NONE,
-                stopbits=serial.STOPBITS_ONE,
-                timeout=0.1,
-                xonxoff=0,
-                rtscts=0,
-                interCharTimeout=None
-            )
-        except serial.serialutil.SerialException:
+        #try:
+            self.UDP_IP = "127.0.0.1"
+            self.UDP_Port = 2003
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.sock.bind((self.UDP_IP,self.UDP_Port))
+            
+            self.rawpacket = self.zeros(1024,int)
+            
+        #except serial.serialutil.SerialException:
             #no serial connection
-            self.ser = None
-        else:
-            Thread(target=receiving, args=(self.ser,)).start()
+            #self.ser = None
+        #else:
+            #Thread(target=receiving, args=(self.ser,)).start()
         
     def next(self):
-    	global timer
-    	global f
-        if not self.ser:
-            return 'bad' #return anything so we can test when Arduino isn't connected
-        #return a float value or try a few times until we get one
-        for i in range(40):
-            raw_line = last_received
-            try:
-                time_str = datetime.datetime.utcnow().strftime("%Y/%m/%d %H:%M:%S")
-                timer = timer + 1
-                if( (timer % 6) == 0):
-                	f.write(time_str + ',' + raw_line + '\n')
-                	print('wrote to file')
-                data = np.array(raw_line.split(','), dtype='|S4')
-                print(data.astype(np.float))
-                return data.astype(np.float)
-            except ValueError:
-                print 'bogus data',raw_line
-                time.sleep(.05)
-        return 0.
+        self.rawpacket, addr = self.sock.recvfrom(1024)
+            
+        
     def __del__(self):
         if self.ser:
             self.ser.close()

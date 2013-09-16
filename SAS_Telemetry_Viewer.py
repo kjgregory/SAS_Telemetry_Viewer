@@ -42,7 +42,7 @@ from matplotlib.backends.backend_wxagg import \
 import numpy as np
 import pylab
 #Data comes from here
-from SAS_Monitor import SerialData as DataGen
+from SAS_UDP_Parser import SerialData as DataGen
 
 
 class BoundControlBox(wx.Panel):
