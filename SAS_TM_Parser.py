@@ -13,10 +13,10 @@ from numpy import *
 last_received = ''
 timer = 0
 
-class UDPReceiver(object):
+class SAS_TM_Parser(object):
     def __init__(self):
         #try:
-            self.UDP_IP = "127.0.0.1"
+            self.UDP_IP = ''
             self.UDP_Port = 2003
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.sock.bind((self.UDP_IP,self.UDP_Port))
@@ -50,10 +50,11 @@ class UDPReceiver(object):
             #Thread(target=receiving, args=(self.ser,)).start()
         
     def parse(self):
-        while True:
-            self.rawpacket = zeros(1024,int)        
-            while (self.rawpacket[3] != 0x30) | ((self.rawpacket[16:18] != [0xeb,0x90])&(self.rawpacket[16:18] != [0xf6,0x26])):
+        #while True:  #un-comment this after debugging
+            self.rawpacket = zeros(1024,int)
+            while (self.rawpacket[3] != 0x30) | (((self.rawpacket[16] != 0xeb)|(self.rawpacket[17] != 0x90))&((self.rawpacket[16] != 0xf6)|(self.rawpacket[17] != 0x26))):
                 self.rawpacket, addr = self.sock.recvfrom(1024)
+                print "New packet:", self.rawpacket[0:16]
             if self.rawpacket[16:18] == (0xeb,0x90):
                 sasnum = 0
             else:
@@ -82,7 +83,7 @@ class UDPReceiver(object):
                     self.housekeeping[sasnum][i] = self.housekeeping[sasnum][i-1]
                     
             self.numpackets[sasnum] = self.numpackets[sasnum] + 1
-            print "packet", sasnum, self.numpackets[sasnum], self.sequence[sasnum]
+            print "SAS Packet", sasnum, self.numpackets[sasnum], self.sequence[sasnum]
                         
         
     def __del__(self):
