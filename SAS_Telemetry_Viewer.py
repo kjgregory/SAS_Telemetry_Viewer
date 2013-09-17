@@ -204,7 +204,7 @@ class GraphFrame(wx.Frame):
         #
         self.plot_data = []
         labels = self.datagen.labels
-        for i in range(14):
+        for i in range(np.size(self.data,1)):
             self.plot_data.append(self.axes.plot(np.arange(10),
                 linewidth=1,
                 label=labels[i],
@@ -238,17 +238,17 @@ class GraphFrame(wx.Frame):
         # the whole data set.
         # 
         if self.ymin_control.is_auto():
-            ymins = np.zeros(len(self.data),float)
-            for i in range(len(self.data)):
-                ymins[i] = min(self.data[i])
+            ymins = np.zeros(min(len(self.data),(xmax-max(xmin,0))),float)
+            for i in range(min(len(self.data),xmax-max(xmin,0))):
+                ymins[i] = min(self.data[i+max(xmin,0)])
             ymin = min(ymins) - 1
         else:
             ymin = int(self.ymin_control.manual_value())
         
         if self.ymax_control.is_auto():
-            ymaxs = np.zeros(len(self.data),float)
-            for i in range(len(self.data)):
-                ymaxs[i] = max(self.data[i])
+            ymaxs = np.zeros(min(len(self.data),(xmax-max(xmin,0))),float)
+            for i in range(min(len(self.data),xmax-max(xmin,0))):
+                ymaxs[i] = max(self.data[i+max(xmin,0)])
             ymax = max(ymaxs) + 1
         else:
             ymax = int(self.ymax_control.manual_value())
@@ -282,14 +282,14 @@ class GraphFrame(wx.Frame):
         pylab.setp(self.axes.get_xticklabels(), 
             visible=self.cb_xlab.IsChecked())
         
-        for i in range(14):        
+        for i in range(np.size(self.data,1)):        
             self.plot_data[i].set_xdata(np.arange(len(self.data)))
         if isinstance(self.data, np.ndarray) and len(self.data) > 1:
-            for i in range(14):
+            for i in range(np.size(self.data,1)):
                 #self.plot_data.set_ydata(self.data[:,self.plot_index])
                 self.plot_data[i].set_ydata(self.data[:,i]);
         else: 
-            for i in range(14):
+            for i in range(np.size(self.data,1)):
                 self.plot_data[i].set_ydata(np.ones(len(self.data)))
         
         self.canvas.draw()
