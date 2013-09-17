@@ -106,7 +106,7 @@ class GraphFrame(wx.Frame):
             self.data = data
         else: 
             self.data = [100]
-               
+
         self.data = [self.datagen.next()]
         self.paused = False
         
@@ -193,7 +193,7 @@ class GraphFrame(wx.Frame):
         self.fig = Figure((3.0, 3.0), dpi=self.dpi)
 
         self.axes = self.fig.add_subplot(111)
-        self.axes.set_axis_bgcolor('black')
+        #self.axes.set_axis_bgcolor('black')
         self.axes.set_title('Arduino Serial Data', size=12)
         
         pylab.setp(self.axes.get_xticklabels(), fontsize=8)
@@ -202,11 +202,15 @@ class GraphFrame(wx.Frame):
         # plot the data as a line series, and save the reference 
         # to the plotted line series
         #
+        self.plot_data = []
+        labels = self.datagen.labels
         for i in range(14):
-            self.plot_data[i] = self.axes.plot(np.arange(10),
+            self.plot_data.append(self.axes.plot(np.arange(10),
                 linewidth=1,
+                label=labels[i],
                 #color=(1, 1, 0),  #let it auto-select colors
-                )[0]
+                )[0])
+        self.axes.legend(loc='best',fontsize=6,ncol=6)
         self.plot_index = 0
 
     def draw_plot(self):
@@ -234,22 +238,29 @@ class GraphFrame(wx.Frame):
         # the whole data set.
         # 
         if self.ymin_control.is_auto():
-            ymin = round(min(self.data), 0) - 1
+            ymins = np.zeros(len(self.data),float)
+            for i in range(len(self.data)):
+                ymins[i] = min(self.data[i])
+            ymin = min(ymins) - 1
         else:
             ymin = int(self.ymin_control.manual_value())
         
         if self.ymax_control.is_auto():
-            ymax = round(max(self.data), 0) + 1
+            ymaxs = np.zeros(len(self.data),float)
+            for i in range(len(self.data)):
+                ymaxs[i] = max(self.data[i])
+            ymax = max(ymaxs) + 1
         else:
             ymax = int(self.ymax_control.manual_value())
 
         if self.plot_choice_control.is_auto():
             if len(self.data) > 1: 
                 self.plot_index = (self.plot_index+1) % len(self.data[0,:]);
+                self.axes.set_title('SAS Temperature Data All', size=12)
         else:
             self.plot_index = int(self.plot_choice_control.manual_value())
-
-        self.axes.set_title('Arduino Serial Data ' + str(self.plot_index), size=12)
+            self.axes.set_title('SAS Temperature Data ' + str(self.plot_index), size=12)
+        
 
         self.axes.set_xbound(lower=xmin, upper=xmax)
         self.axes.set_ybound(lower=ymin, upper=ymax)

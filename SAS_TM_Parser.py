@@ -138,7 +138,10 @@ class SAS_TM_Parser(object):
         self.timestamps = [],[]
         self.sequence = [],[]
         self.packet = sasPacket()
-        self.housekeepingData = np.zeros((2,14),float)
+        self.housekeepingData = np.zeros((17),float)
+        self.labels = ["SAS 1 SBC Temp", "SAS 1 CPU", "SAS 1 Side of Can", "SAS 1 HDD", "SAS 1 Heater Plate", 
+                      "SAS 1 Air", "SAS 1 Rail near Plate", "PYAS-F", "SAS 2 SBC Temp", "SAS 2 CPU", "SAS 2 Side of Can", 
+                      "SAS 2 HDD", "SAS 2 Heater Plate", "SAS 2 Air", "SAS 2 Rail near Plate", "PYAS-R", "RAS"]
         
         #except serial.serialutil.SerialException:
             #no serial connection
@@ -158,13 +161,18 @@ class SAS_TM_Parser(object):
                     idx = self.packet.telemSeqNum % 8
                     # print "SAS: ", sas+1, " HKidx: ", idx, " Data: ", self.packet.housekeeping[0], " ", self.packet.housekeeping[1]
                     if (idx < 7):
-                        self.housekeepingData[sas][idx] = self.packet.housekeeping[0]
-                        self.housekeepingData[sas][7 + idx] = self.packet.housekeeping[1]
+                        self.housekeepingData[idx + 8*sas] = self.packet.housekeeping[0]
+                        if (idx < 2):
+                            if (sas == 0):
+                                self.housekeepingData[8] = self.packet.housekeeping[1];
+                            else:
+                                self.housekeepingData[idx + 8*sas] = self.packet.housekeeping[1]
+
                         print self.housekeepingData
-                        print "\r\r\r\r"
                         return self.housekeepingData
         else:
-            self.housekeepingData[0] = self.housekeepingData[0]+[0.2,0.2,0.2,0.2,0.2,0.2,0.2]
-            self.housekeepingdata[1] = self.housekeepingData[1]+[0.2,0.2,0.2,0.2,0.2,0.2,0.2]
+            self.housekeepingData = self.housekeepingData+[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5,1.6,1.7]
+            return self.housekeepingData
+
     def __del__(self):
         self.sock.close()
