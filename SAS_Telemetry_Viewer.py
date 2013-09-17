@@ -238,17 +238,17 @@ class GraphFrame(wx.Frame):
         # the whole data set.
         # 
         if self.ymin_control.is_auto():
-            ymins = np.zeros(len(self.data),float)
-            for i in range(len(self.data)):
-                ymins[i] = min(self.data[i])
+            ymins = np.zeros(min(len(self.data),(xmax-max(xmin,0))),float)
+            for i in range(min(len(self.data),xmax-max(xmin,0))):
+                ymins[i] = min(self.data[i+max(xmin,0)])
             ymin = min(ymins) - 1
         else:
             ymin = int(self.ymin_control.manual_value())
         
         if self.ymax_control.is_auto():
-            ymaxs = np.zeros(len(self.data),float)
-            for i in range(len(self.data)):
-                ymaxs[i] = max(self.data[i])
+            ymaxs = np.zeros(min(len(self.data),(xmax-max(xmin,0))),float)
+            for i in range(min(len(self.data),xmax-max(xmin,0))):
+                ymaxs[i] = max(self.data[i+max(xmin,0)])
             ymax = max(ymaxs) + 1
         else:
             ymax = int(self.ymax_control.manual_value())
