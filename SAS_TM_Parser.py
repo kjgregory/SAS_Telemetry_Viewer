@@ -22,7 +22,7 @@ class heroesHeader:
         self.source = []
         self.payloadLength = []
         self.checksum = []
-        self.timesNano = []
+        self.timeNano = []
         self.timeSec = []          
     
     def read(self, rawpacket = ''):
@@ -33,7 +33,7 @@ class heroesHeader:
             self.source = header[2]
             self.payloadLength = header[3]
             self.checksum = header[4]
-            self.timesNano = header[5]
+            self.timeNano = header[5]
             self.timeSec = header[6]
             
             if (self.syncWord != 0xc39a):
@@ -134,15 +134,24 @@ class SAS_TM_Parser(object):
         
         self.rawpacket = ''
         
-        self.numpackets = (0,0)
-        self.timestamps = [],[]
-        self.sequence = [],[]
+        self.numpackets = np.zeros(2,int)
+        self.timestamps = np.zeros(2,float)
+        self.sequence = np.zeros(2,int)
         self.packet = sasPacket()
-        self.housekeepingData = np.zeros((17),float)
-        self.labels = ["SAS 1 CPU", "SAS 1 CPU Heatsink", "SAS 1 Can", "SAS 1 HDD", "SAS 1 Heater Plate", 
-                      "SAS 1 Air", "SAS 1 Rail", "PYAS-F", "SAS 2 CPU", "SAS 2 CPU Heatsink", "SAS 2 Can", 
-                      "SAS 2 HDD", "SAS 2 Heater Plate", "SAS 2 Air", "SAS 2 Rail", "PYAS-R", "RAS"]
-        
+
+        self.canTemps = np.zeros((2,7), float)
+        self.cameraTemps = np.zeros((3), float)
+
+        self.canLabels = ["CPU", "CPU Heatsink", "Can", "HDD", "Heater Plate", "Air", "Rail"]
+        self.cameraLabels = ["PYAS-F", "PYAS-R", "RAS"]
+        self.titles = ["SAS 1", "SAS 2", "Cameras"]
+
+        self.labels = [[],[],[]]
+        for s in range (0, 2):
+            for k in range (0, len(self.canLabels)):
+                self.labels[s].append(self.titles[s] + " " + self.canLabels[k])
+        self.labels[2] = self.cameraLabels
+
         #except serial.serialutil.SerialException:
             #no serial connection
             #self.ser = None
@@ -150,7 +159,7 @@ class SAS_TM_Parser(object):
             #Thread(target=receiving, args=(self.ser,)).start()
         
     def next(self):
-        if self.validsocket:        
+        if False:#self.validsocket:        
             while True:
                 self.rawpacket, addr = self.sock.recvfrom(1024)
                 length = len(self.rawpacket)
@@ -158,22 +167,33 @@ class SAS_TM_Parser(object):
                 valid = self.packet.read(self.rawpacket)
                 if valid:
                     sas = self.packet.sasID -1
+                    self.numpackets[sas] += 1
+                    
+                    self.timestamps[sas] = self.packet.header.timeSec + self.packet.header.timeNano*1e-9
+                    self.sequence[sas] = self.packet.telemSeqNum
+
                     idx = self.packet.telemSeqNum % 8
                     # print "SAS: ", sas+1, " HKidx: ", idx, " Data: ", self.packet.housekeeping[0], " ", self.packet.housekeeping[1]
                     if (idx < 7):
-                        self.housekeepingData[idx + 8*sas] = self.packet.housekeeping[0]
+                        self.canTemps[sas][idx] = self.packet.housekeeping[0]
                         if (idx < 2):
                             if (sas == 0):
-                                self.housekeepingData[8*sas + 7] = self.packet.housekeeping[1];
+                                self.cameraTemps[0] = self.packet.housekeeping[1]
                             else:
-                                self.housekeepingData[idx + 8*sas + 7] = self.packet.housekeeping[1]
+                                self.cameraTemps[1+idx] = self.packet.housekeeping[1]
 
                     break
         else:
-            self.housekeepingData = self.housekeepingData+[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5,1.6,1.7]
-        for k in range (0, 17):
-            print self.labels[k], ": ", self.housekeepingData[k]
-        return self.housekeepingData
+            self.canTemps = self.canTemps + [np.linspace(0.1,0.7,7),np.linspace(0.9,1.5,7)]
+            self.cameraTemps = self.cameraTemps + [0.8, 1.6, 1.7]
+
+        # for s in range (0, 2):
+        #     for k in range (0, 7):
+        #         print self.titles[s], self.canLabels[k], self.canTemps[s][k]
+        # for c in range (0, 3):
+        #     print self.cameraLabels[c], self.cameraTemps[c]
+        return [self.canTemps[0][:], self.canTemps[1][:], self.cameraTemps]
+        
 
     def __del__(self):
         self.sock.close()
