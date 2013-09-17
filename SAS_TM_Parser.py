@@ -7,84 +7,155 @@ http://stackoverflow.com/questions/1093598/pyserial-how-to-read-last-line-sent-f
 #import time
 import socket
 #import datetime
-from numpy import *
-#import numpy as np
+# from numpy import *
+import numpy as np
+
+import struct
 
 last_received = ''
 timer = 0
 
+class heroesHeader:
+    def __init__(self):
+        self.syncWord = []
+        self.payloadType = []
+        self.source = []
+        self.payloadLength = []
+        self.checksum = []
+        self.timesNano = []
+        self.timeSec = []          
+    
+    def read(self, rawpacket = ''):
+        if (len(rawpacket) >= 16):
+            header = struct.unpack('=H2B2H2I',rawpacket[0:16])
+            self.syncWord = header[0]
+            self.payloadType = header[1]
+            self.source = header[2]
+            self.payloadLength = header[3]
+            self.checksum = header[4]
+            self.timesNano = header[5]
+            self.timeSec = header[6]
+            
+            if (self.syncWord != 0xc39a):
+                print "Invalid HEROES sync word: ", hex(self.syncWord)
+                return False
+            else:
+                return True
+        else:
+            return False
+
+class heroesPacket:
+    def __init__(self):
+        self.header = heroesHeader()
+        self.payload = ''
+
+    def read(self, rawpacket):
+        valid = self.header.read(rawpacket)
+        self.payload = rawpacket[16:]
+        return vaild
+
+
+class sasPacket(heroesPacket):
+    def __init__(self):
+        heroesPacket.__init__(self)
+        self.syncWord = []
+        self.telemSeqNum = []
+        self.status = []
+        self.cmdEcho = []
+        self.housekeeping = []
+        
+        self.sasID = []
+        
+    def read(self, rawpacket):
+        valid = self.header.read(rawpacket)
+        if not valid: return 1
+        if (self.header.source != 0x30):
+            # print "Invalid source ID: ", hex(self.header.source)
+            return False
+        if (self.header.payloadType != 0x70):
+            # print "Invalid payload type: ", hex(self.header.payloadType)
+            return False
+        if (self.header.payloadLength != 94):
+            # print "Payload too short: ", hex(self.header.payloadLength)
+            return False
+        
+        header = struct.unpack('=HIBH', rawpacket[16:25])
+        self.syncWord = header[0]
+        self.telemSeqNum = header[1]
+        self.status = header[2]
+        self.cmdEcho = header[3]
+        if (self.syncWord == 0xeb90):
+            self.sasID = 1
+        elif (self.syncWord == 0xf626):
+            self.sasID = 2
+        else:
+            # print "Not a SAS I know: ", hex(self.syncWord)
+            return False
+
+        self.housekeeping = list(struct.unpack('=2H', rawpacket[25:29]))
+        roundRobinPos = self.telemSeqNum % 8
+        for i in range (0, 2):
+            if (roundRobinPos < 7):
+                self.housekeeping[i] = (float(self.housekeeping[i])-8192)/8
+                if (i == 0):
+                    self.housekeeping[i] /= 10;
+                else:
+                    if (roundRobinPos < 2):
+                        self.housekeeping[i] /= 10;
+                    else:
+                        self.housekeeping[i] /= 500;
+            else:
+                if (i == 0):
+                    if (self.housekeeping[i] == 0):
+                        self.housekeeping[i] = 'Not Synced'
+                    else:
+                        self.housekeeping[i] = 'Synced'
+                else:
+                    if (self.housekeeping[i] == 0): self.housekeeping[i] = 'Neither'
+                    elif (self.housekeeping[i] == 1): self.housekeeping[i] = 'PYAS'
+                    elif (self.housekeeping[i] == 2): self.housekeeping[i] = 'RAS'
+                    elif (self.housekeeping[i] == 3): self.housekeeping[i] = 'Both'
+                    else: self.housekeeping[i] = 'Father give me legs'
+
+        return True
+
 class SAS_TM_Parser(object):
     def __init__(self):
         #try:
-            self.UDP_IP = ''
-            self.UDP_Port = 2003
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            self.sock.bind((self.UDP_IP,self.UDP_Port))
-            
-            self.rawpacket = zeros(1024,int)
-            
-            self.numpackets = (0,0)
-            self.timestamps = [],[]
-            self.sequence = [],[]
-            
-            #finish implementing the rest of the packet later... this will help us get to a working temperature display sooner            
-            self.housekeeping = ([],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]),([],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[])
-            #self.suncenterx = ([],[]),([],[])
-            #self.suncentery = ([],[]),([],[])
-            #self.scerrorx = [],[]
-            #self.scerrory = [],[]
-            #self.limb. = [],[]
-            #self.limby = [],[]
-            #self.numfiducials = [],[]
-            #self.numlimbs = [],[]
-            #self.fiducialsx = ([],[],[],[],[],[]),([],[],[],[],[],[])
-            #self.fiducialsy = ([],[],[],[],[],[]),([],[],[],[],[],[])
-            #self.px2scx = ([],[]),([],[])
-            #self.px2scy = ([],[]),([],[])
-            
-            
+        self.UDP_IP = ''
+        self.UDP_Port = 2003
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.bind((self.UDP_IP,self.UDP_Port))
+        
+        self.rawpacket = ''
+        
+        self.numpackets = (0,0)
+        self.timestamps = [],[]
+        self.sequence = [],[]
+        self.packet = sasPacket()
+        self.housekeepingData = np.zeros((2,14),float)
+        
         #except serial.serialutil.SerialException:
             #no serial connection
             #self.ser = None
         #else:
             #Thread(target=receiving, args=(self.ser,)).start()
         
-    def parse(self):
-        #while True:  #un-comment this after debugging
-            self.rawpacket = zeros(1024,int)
-            while (self.rawpacket[3] != 0x30) | (((self.rawpacket[16] != 0xeb)|(self.rawpacket[17] != 0x90))&((self.rawpacket[16] != 0xf6)|(self.rawpacket[17] != 0x26))):
-                self.rawpacket, addr = self.sock.recvfrom(1024)
-                print "New packet:", self.rawpacket[0:16]
-            if self.rawpacket[16:18] == (0xeb,0x90):
-                sasnum = 0
-            else:
-                sasnum = 1
-            self.timestamps[sasnum].append(0)
-            for i in range(12,16):            
-                self.timestamps[sasnum][self.numpackets] = self.timestamps[sasnum][self.numpackets] + (self.rawpacket[i] << (8*(15-i)))
-            self.sequence[sasnum].append(0)
-            for i in range(18,22):
-                self.sequence[sasnum] = self.sequence[sasnum] + (self.rawpacket[i] << (8*(21-i)))
-            #TODO: stick nano-seconds into the timestamps list here...
-            hknum = self.sequence[sasnum] & 0xf
-            for i in range(0,8):
-                if i == hknum:
-                    self.housekeeping[sasnum][i] = (self.rawpacket[25] << 8) + self.rawpacket[26]
-                elif self.numpackets[sasnum] == 0:
-                    self.housekeeping[sasnum][i] = 0
-                else:
-                    self.housekeeping[sasnum][i] = self.housekeeping[sasnum][i-1]
-            for i in range(8,16):
-                if i == hknum + 8:
-                    self.housekeeping[sasnum][i] = (self.rawpacket[27] << 8) + self.rawpacket[28]
-                elif self.numpackets[sasnum] == 0:
-                    self.housekeeping[sasnum][i] = 0
-                else:
-                    self.housekeeping[sasnum][i] = self.housekeeping[sasnum][i-1]
-                    
-            self.numpackets[sasnum] = self.numpackets[sasnum] + 1
-            print "SAS Packet", sasnum, self.numpackets[sasnum], self.sequence[sasnum]
-                        
-        
+    def next(self):
+        while True:
+            self.rawpacket, addr = self.sock.recvfrom(1024)
+            length = len(self.rawpacket)
+            # print "Got a packet of length ", length
+            valid = self.packet.read(self.rawpacket)
+            if valid:
+                sas = self.packet.sasID -1
+                idx = self.packet.telemSeqNum % 8
+                # print "SAS: ", sas+1, " HKidx: ", idx, " Data: ", self.packet.housekeeping[0], " ", self.packet.housekeeping[1]
+                if (idx < 7):
+                    self.housekeepingData[sas][idx] = self.packet.housekeeping[0]
+                    self.housekeepingData[sas][7 + idx] = self.packet.housekeeping[1]
+                print self.housekeepingData
+                print "\r\r\r\r"
+                return self.housekeepingData
     def __del__(self):
         self.sock.close()
