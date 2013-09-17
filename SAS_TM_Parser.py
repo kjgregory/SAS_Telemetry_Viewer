@@ -164,15 +164,15 @@ class SAS_TM_Parser(object):
                         self.housekeepingData[idx + 8*sas] = self.packet.housekeeping[0]
                         if (idx < 2):
                             if (sas == 0):
-                                self.housekeepingData[8] = self.packet.housekeeping[1];
+                                self.housekeepingData[7] = self.packet.housekeeping[1];
                             else:
-                                self.housekeepingData[idx + 8*sas] = self.packet.housekeeping[1]
+                                self.housekeepingData[idx + 8*sas + 7] = self.packet.housekeeping[1]
 
-                        print self.housekeepingData
-                        return self.housekeepingData
+                    break
         else:
             self.housekeepingData = self.housekeepingData+[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5,1.6,1.7]
-            return self.housekeepingData
+        print self.housekeepingData
+        return self.housekeepingData
 
     def __del__(self):
         self.sock.close()
