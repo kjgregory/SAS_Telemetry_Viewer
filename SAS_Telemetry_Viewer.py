@@ -27,7 +27,8 @@ import os
 import sys
 import wx
 
-REFRESH_INTERVAL_MS = 1000
+REFRESH_INTERVAL_MS = 500
+RECORD_LENGTH_MAX = 100000
 
 # The recommended way to use wx with mpl is with the WXAgg
 # backend. 
@@ -103,11 +104,11 @@ class GraphFrame(wx.Frame):
         self.datagen = DataGen()
         data = self.datagen.next()
         if isinstance(data, np.ndarray):
-            self.data = data
+            self.data = [data]
         else: 
             self.data = [100]
 
-        self.data = [self.datagen.next()]
+        #self.data = [self.datagen.next()]
         self.paused = False
         
         self.create_menu()
@@ -336,7 +337,10 @@ class GraphFrame(wx.Frame):
             if isinstance(data, np.ndarray) and not isinstance(self.data, np.ndarray):
                 self.data = data
             if isinstance(data, np.ndarray) and isinstance(self.data, np.ndarray):
-                self.data = np.vstack((self.data, data))
+                if (len(self.data) < RECORD_LENGTH_MAX):
+                    self.data = np.vstack((self.data, data))
+                else:
+                    self.data = np.vstack((self.data[1:(RECORD_LENGTH_MAX)],data))
                 if np.any(data < alarm_temp):
 					sys.stdout.write('\a')
 					sys.stdout.flush()
