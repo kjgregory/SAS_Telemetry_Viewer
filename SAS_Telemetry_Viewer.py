@@ -202,7 +202,7 @@ class GraphFrame(wx.Frame):
         # plot the data as a line series, and save the reference 
         # to the plotted line series
         #
-        for i in range(17):
+        for i in range(14):
             self.plot_data[i] = self.axes.plot(np.arange(10),
                 linewidth=1,
                 #color=(1, 1, 0),  #let it auto-select colors
@@ -271,14 +271,14 @@ class GraphFrame(wx.Frame):
         pylab.setp(self.axes.get_xticklabels(), 
             visible=self.cb_xlab.IsChecked())
         
-        for i in range(17):        
+        for i in range(14):        
             self.plot_data[i].set_xdata(np.arange(len(self.data)))
         if isinstance(self.data, np.ndarray) and len(self.data) > 1:
-            for i in range(17):
+            for i in range(14):
                 #self.plot_data.set_ydata(self.data[:,self.plot_index])
                 self.plot_data[i].set_ydata(self.data[:,i]);
         else: 
-            for i in range(17):
+            for i in range(14):
                 self.plot_data[i].set_ydata(np.ones(len(self.data)))
         
         self.canvas.draw()

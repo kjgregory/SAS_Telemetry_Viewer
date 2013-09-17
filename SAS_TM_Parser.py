@@ -124,8 +124,13 @@ class SAS_TM_Parser(object):
         #try:
         self.UDP_IP = ''
         self.UDP_Port = 2003
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock.bind((self.UDP_IP,self.UDP_Port))
+        try:
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.sock.bind((self.UDP_IP,self.UDP_Port))
+            self.validsocket = True
+        except:
+            print "Can't create socket"
+            self.validsocket = False
         
         self.rawpacket = ''
         
@@ -142,20 +147,24 @@ class SAS_TM_Parser(object):
             #Thread(target=receiving, args=(self.ser,)).start()
         
     def next(self):
-        while True:
-            self.rawpacket, addr = self.sock.recvfrom(1024)
-            length = len(self.rawpacket)
-            # print "Got a packet of length ", length
-            valid = self.packet.read(self.rawpacket)
-            if valid:
-                sas = self.packet.sasID -1
-                idx = self.packet.telemSeqNum % 8
-                # print "SAS: ", sas+1, " HKidx: ", idx, " Data: ", self.packet.housekeeping[0], " ", self.packet.housekeeping[1]
-                if (idx < 7):
-                    self.housekeepingData[sas][idx] = self.packet.housekeeping[0]
-                    self.housekeepingData[sas][7 + idx] = self.packet.housekeeping[1]
-                print self.housekeepingData
-                print "\r\r\r\r"
-                return self.housekeepingData
+        if self.validsocket:        
+            while True:
+                self.rawpacket, addr = self.sock.recvfrom(1024)
+                length = len(self.rawpacket)
+                # print "Got a packet of length ", length
+                valid = self.packet.read(self.rawpacket)
+                if valid:
+                    sas = self.packet.sasID -1
+                    idx = self.packet.telemSeqNum % 8
+                    # print "SAS: ", sas+1, " HKidx: ", idx, " Data: ", self.packet.housekeeping[0], " ", self.packet.housekeeping[1]
+                    if (idx < 7):
+                        self.housekeepingData[sas][idx] = self.packet.housekeeping[0]
+                        self.housekeepingData[sas][7 + idx] = self.packet.housekeeping[1]
+                        print self.housekeepingData
+                        print "\r\r\r\r"
+                        return self.housekeepingData
+        else:
+            self.housekeepingData[0] = self.housekeepingData[0]+[0.2,0.2,0.2,0.2,0.2,0.2,0.2]
+            self.housekeepingdata[1] = self.housekeepingData[1]+[0.2,0.2,0.2,0.2,0.2,0.2,0.2]
     def __del__(self):
         self.sock.close()
