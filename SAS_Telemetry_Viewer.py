@@ -22,11 +22,10 @@ License: this code is in the public domain
 Last modified: 31.07.2008
 """
 import os
-import pprint
-import random
+#import pprint
+#import random
 import sys
 import wx
-import sys
 
 REFRESH_INTERVAL_MS = 1000
 
@@ -42,7 +41,7 @@ from matplotlib.backends.backend_wxagg import \
 import numpy as np
 import pylab
 #Data comes from here
-from SAS_UDP_Parser import SerialData as DataGen
+from SAS_TM_Parser import SAS_TM_Parser as DataGen
 
 
 class BoundControlBox(wx.Panel):
@@ -108,7 +107,7 @@ class GraphFrame(wx.Frame):
         else: 
             self.data = [100]
                
-        #self.data = [self.datagen.next()]
+        self.data = [self.datagen.next()]
         self.paused = False
         
         self.create_menu()
