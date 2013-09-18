@@ -141,6 +141,7 @@ class SAS_TM_Parser(object):
 
         self.canTemps = np.zeros((2,7), float)
         self.cameraTemps = np.zeros((3), float)
+        self.data = [self.canTemps[0][:], self.canTemps[1][:], self.cameraTemps]
 
         self.canLabels = ["CPU", "CPU Heatsink", "Can", "HDD", "Heater Plate", "Air", "Rail"]
         self.cameraLabels = ["PYAS-F", "PYAS-R", "RAS"]
@@ -159,7 +160,7 @@ class SAS_TM_Parser(object):
             #Thread(target=receiving, args=(self.ser,)).start()
         
     def next(self):
-        if False:#self.validsocket:        
+        if self.validsocket:        
             while True:
                 self.rawpacket, addr = self.sock.recvfrom(1024)
                 length = len(self.rawpacket)
@@ -192,7 +193,8 @@ class SAS_TM_Parser(object):
         #         print self.titles[s], self.canLabels[k], self.canTemps[s][k]
         # for c in range (0, 3):
         #     print self.cameraLabels[c], self.cameraTemps[c]
-        return [self.canTemps[0][:], self.canTemps[1][:], self.cameraTemps]
+        self.data = [self.canTemps[0][:], self.canTemps[1][:], self.cameraTemps]
+        return self.data
         
 
     def __del__(self):
