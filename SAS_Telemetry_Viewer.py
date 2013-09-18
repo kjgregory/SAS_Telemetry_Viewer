@@ -228,12 +228,52 @@ class GraphFrame(wx.Frame):
         #
         xmax = []
         xmin = []
-        ymins = []
-        ymaxs = []
         ymin = []
         ymax = []
-                        
+                 
         for n in range(self.numplots):
+
+            ymins = []
+            ymaxs = []   
+    
+            #if self.plot_choice_control.is_auto():
+                #if len(self.data[n]) > 1: 
+                    #self.plot_index = (self.plot_index+1) % len(self.data[n][0,:]);
+            self.axes[n].set_title(self.plotTitles[n], size=12)
+            #else:
+                #self.plot_index = int(self.plot_choice_control.manual_value())
+                #self.axes[n].set_title('SAS Temperature Data ' + str(self.plot_index), size=12)
+
+            # anecdote: axes.grid assumes b=True if any other flag is
+            # given even if b is set to False.
+            # so just passing the flag into the first statement won't
+            # work.
+            #
+            if self.cb_grid.IsChecked():
+                self.axes[n].grid(True, color='gray')
+            else:
+                self.axes[n].grid(False)
+    
+            # Using setp here is convenient, because get_xticklabels
+            # returns a list over which one needs to explicitly 
+            # iterate, and setp already handles this.
+            #  
+            pylab.setp(self.axes[n].get_xticklabels(), 
+                visible=self.cb_xlab.IsChecked())
+            xdata = np.arange(self.data[n].shape[1])
+            for i in range(self.data[n].shape[0]):
+                self.plot_data[n][i].set_xdata(xdata)
+                
+                if isinstance(self.data[n], np.ndarray) and self.data[n].shape[1] > 1:
+                    ydata = self.data[n][i][:]
+                else:
+                    ydata = np.ones(self.data[n].shape[1])
+
+                ymins.append(min(ydata))
+                ymaxs.append(max(ydata))
+                self.plot_data[n][i].set_ydata(ydata)
+                 
+            # Generate xmin and xmax        
             if self.xmax_control.is_auto():
                 xmax.append(len(self.data[n]) if len(self.data[n]) > 50 else 50)
             else:
@@ -252,63 +292,18 @@ class GraphFrame(wx.Frame):
             # the whole data set.
             # 
             if self.ymin_control.is_auto():
-                ymins.append([])                
-                ymins[n].append(np.zeros(min(len(self.data[n]),(xmax[n]-max(xmin[n],0))),float))
-                for i in range(min(len(self.data[n]),xmax[n]-max(xmin[n],0))):
-                    print n,i,'-',len(ymins),len(ymins[n]),'-',len(xmin),'-',len(self.data),len(self.data[n])
-                    ymins[n][i] = min(self.data[n][i+max(xmin[n],0)])
-                ymin.append(min(ymins[n]) - 1)
+                ymin.append(min(ymins) - 1)
             else:
                 ymin.append(int(self.ymin_control.manual_value()))
             
             if self.ymax_control.is_auto():
-                ymaxs.append(np.zeros(min(len(self.data[n]),(xmax[n]-max(xmin[n],0))),float))
-                for i in range(min(len(self.data[n]),xmax[n]-max(xmin[n],0))):
-                    ymaxs[n][i] = max(self.data[n][i+max(xmin[n],0)])
-                ymax.append(max(ymaxs[n]) + 1)
+                ymax.append(max(ymaxs) + 1)
             else:
-                ymax.append(int(self.ymax_control.manual_value()))
-    
-            #if self.plot_choice_control.is_auto():
-                #if len(self.data[n]) > 1: 
-                    #self.plot_index = (self.plot_index+1) % len(self.data[n][0,:]);
-            self.axes[n].set_title(self.plotTitles[n], size=12)
-            #else:
-                #self.plot_index = int(self.plot_choice_control.manual_value())
-                #self.axes[n].set_title('SAS Temperature Data ' + str(self.plot_index), size=12)
-            
-    
-            #self.axes[n].set_xbound(lower=xmin[n], upper=xmax[n])
-            #self.axes[n].set_ybound(lower=ymin[n], upper=ymax[n])
-            
-            # anecdote: axes.grid assumes b=True if any other flag is
-            # given even if b is set to False.
-            # so just passing the flag into the first statement won't
-            # work.
-            #
-            if self.cb_grid.IsChecked():
-                self.axes[n].grid(True, color='gray')
-            else:
-                self.axes[n].grid(False)
-    
-            # Using setp here is convenient, because get_xticklabels
-            # returns a list over which one needs to explicitly 
-            # iterate, and setp already handles this.
-            #  
-            pylab.setp(self.axes[n].get_xticklabels(), 
-                visible=self.cb_xlab.IsChecked())
-            for i in range(self.data[n].shape[0]):
-                self.plot_data[n][i].set_xdata(np.arange(self.data[n].shape[1]))
-                                
-                if isinstance(self.data[n], np.ndarray) and self.data[n].shape[1] > 1:
+                ymax.append(int(self.ymax_control.manual_value()))        
 
-                    self.plot_data[n][i].set_ydata(self.data[n][i][:]);
-                else: 
-                    self.plot_data[n][i].set_ydata(np.ones(self.data[n].shape[1]))
-                    
-                    
             self.axes[n].set_xbound(lower=xmin[n], upper=xmax[n])
             self.axes[n].set_ybound(lower=ymin[n], upper=ymax[n])
+
         self.canvas.draw()
     
     def on_pause_button(self, event):
