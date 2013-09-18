@@ -123,7 +123,7 @@ class SAS_TM_Parser(object):
     def __init__(self):
         #try:
         self.UDP_IP = ''
-        self.UDP_Port = 2002
+        self.UDP_Port = 2003
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.sock.bind((self.UDP_IP,self.UDP_Port))
@@ -163,7 +163,7 @@ class SAS_TM_Parser(object):
         
     def next(self):
         startTime = t.time()
-        if False:#self.validsocket:        
+        if self.validsocket:        
             while True:
                 self.rawpacket, addr = self.sock.recvfrom(1024)
                 length = len(self.rawpacket)
