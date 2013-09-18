@@ -27,7 +27,7 @@ import os
 import sys
 import wx
 
-REFRESH_INTERVAL_MS = 1000
+REFRESH_INTERVAL_MS = 100
 RECORD_LENGTH_MAX = 100000
 
 # The recommended way to use wx with mpl is with the WXAgg
