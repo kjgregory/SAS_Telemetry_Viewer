@@ -232,9 +232,11 @@ class GraphFrame(wx.Frame):
         ymax = []
                  
         for n in range(self.numplots):
-
+            
+            xmins = []
+            xmaxs = []
             ymins = []
-            ymaxs = []   
+            ymaxs = []
     
             #if self.plot_choice_control.is_auto():
                 #if len(self.data[n]) > 1: 
@@ -261,6 +263,22 @@ class GraphFrame(wx.Frame):
             pylab.setp(self.axes[n].get_xticklabels(), 
                 visible=self.cb_xlab.IsChecked())
             xdata = np.arange(self.data[n].shape[1])
+            xmins.append(min(xdata))
+            xmaxs.append(max(xdata))
+
+            # Generate xmin and xmax        
+            if self.xmax_control.is_auto():
+                xmax.append(max(xmaxs))
+            else:
+                xmax.append(int(self.xmax_control.manual_value()))
+                
+            if self.xmin_control.is_auto():            
+                xmin.append(min(xmins))
+            else:
+                xmin.append(self.xmin_control.manual_value())
+
+
+
             for i in range(self.data[n].shape[0]):
                 self.plot_data[n][i].set_xdata(xdata)
                 
@@ -268,21 +286,15 @@ class GraphFrame(wx.Frame):
                     ydata = self.data[n][i][:]
                 else:
                     ydata = np.ones(self.data[n].shape[1])
-
-                ymins.append(min(ydata))
-                ymaxs.append(max(ydata))
+                if (xmin[n] >= 0) & (xmax[n] > 0) & (xmax[n] > xmin[n]):
+                    ymins.append(min(ydata[xmin[n]:xmax[n]]))
+                    ymaxs.append(max(ydata[xmin[n]:xmax[n]]))
+                else:
+                    ymins.append(min(ydata))
+                    ymaxs.append(max(ydata))
                 self.plot_data[n][i].set_ydata(ydata)
                  
-            # Generate xmin and xmax        
-            if self.xmax_control.is_auto():
-                xmax.append(len(self.data[n]) if len(self.data[n]) > 50 else 50)
-            else:
-                xmax.append(int(self.xmax_control.manual_value()))
-                
-            if self.xmin_control.is_auto():            
-                xmin.append(xmax[n] - 100)
-            else:
-                xmin.append(self.xmin_control.manual_value())
+
     
             # for ymin and ymax, find the minimal and maximal values
             # in the data set and add a mininal margin.
@@ -291,6 +303,7 @@ class GraphFrame(wx.Frame):
             # minimal/maximal value in the current display, and not
             # the whole data set.
             # 
+            
             if self.ymin_control.is_auto():
                 ymin.append(min(ymins) - 1)
             else:
