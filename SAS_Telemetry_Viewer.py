@@ -278,8 +278,8 @@ class GraphFrame(wx.Frame):
                 #self.axes[n].set_title('SAS Temperature Data ' + str(self.plot_index), size=12)
             
     
-            self.axes[n].set_xbound(lower=xmin[n], upper=xmax[n])
-            self.axes[n].set_ybound(lower=ymin[n], upper=ymax[n])
+            #self.axes[n].set_xbound(lower=xmin[n], upper=xmax[n])
+            #self.axes[n].set_ybound(lower=ymin[n], upper=ymax[n])
             
             # anecdote: axes.grid assumes b=True if any other flag is
             # given even if b is set to False.
@@ -306,6 +306,9 @@ class GraphFrame(wx.Frame):
                 else: 
                     self.plot_data[n][i].set_ydata(np.ones(self.data[n].shape[1]))
                     
+                    
+            self.axes[n].set_xbound(lower=xmin[n], upper=xmax[n])
+            self.axes[n].set_ybound(lower=ymin[n], upper=ymax[n])
         self.canvas.draw()
     
     def on_pause_button(self, event):
