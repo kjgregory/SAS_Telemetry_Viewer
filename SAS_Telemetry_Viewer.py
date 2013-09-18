@@ -103,12 +103,20 @@ class GraphFrame(wx.Frame):
         
         self.datagen = DataGen()
         data = self.datagen.next()
-        if isinstance(data, np.ndarray):
-            self.data = [data]
-        else: 
-            self.data = [100]
-
-        #self.data = [self.datagen.next()]
+        
+        self.data = data;
+        #if isinstance(data, np.ndarray):
+            #self.data = data
+        #else: 
+            #self.data = [100]
+            
+            
+        data = self.datagen.next()
+        for n in range(len(self.data)):
+            self.data[n] = np.vstack((self.data[n], data[n]))
+        
+        self.numplots = len(self.datagen.labels)
+        
         self.paused = False
         
         self.create_menu()
@@ -193,8 +201,9 @@ class GraphFrame(wx.Frame):
         self.dpi = 100
         self.fig = Figure((3.0, 3.0), dpi=self.dpi)
         self.axes = []
-        for n in range(len(self.data)):
-            self.axes.append(self.fig.add_subplot(1,len(self.data),n))
+        
+        for n in range(self.numplots):
+            self.axes.append(self.fig.add_subplot(1,self.numplots,n))
             self.axes[n].set_title('SAS Temperature Data', size=12)
             pylab.setp(self.axes[n].get_xticklabels(), fontsize=8)
             pylab.setp(self.axes[n].get_yticklabels(), fontsize=8)
@@ -204,9 +213,10 @@ class GraphFrame(wx.Frame):
         #
         self.plot_data = []
         labels = self.datagen.labels
-        for n in range(len(self.data)):        
+        for n in range(len(self.data)):
+            self.plot_data.append([])
             for i in range(len(self.data[n])):
-                self.plot_data.append(self.axes[n].plot(np.arange(10),
+                self.plot_data[n].append(self.axes[n].plot(np.arange(10),
                                                      linewidth=1,
                                                      label=labels[n][i],
                                                      #color=(1, 1, 0),  #let it auto-select colors
@@ -221,16 +231,23 @@ class GraphFrame(wx.Frame):
         # sliding window effect. therefore, xmin is assigned after
         # xmax.
         #
-        for n in range(len(self.axes)):
+        xmax = []
+        xmin = []
+        ymins = []
+        ymaxs = []
+        ymin = []
+        ymax = []
+                        
+        for n in range(self.numplots):
             if self.xmax_control.is_auto():
-                xmax[n] = len(self.data[n]) if len(self.data[n]) > 50 else 50
+                xmax.append(len(self.data[n]) if len(self.data[n]) > 50 else 50)
             else:
-                xmax[n] = int(self.xmax_control.manual_value())
+                xmax.append(int(self.xmax_control.manual_value()))
                 
             if self.xmin_control.is_auto():            
-                xmin[n] = xmax[n] - 100
+                xmin.append(xmax[n] - 100)
             else:
-                xmin[n] = int(self.xmin_control.manual_value())
+                xmin.append(self.xmin_control.manual_value())
     
             # for ymin and ymax, find the minimal and maximal values
             # in the data set and add a mininal margin.
@@ -240,28 +257,30 @@ class GraphFrame(wx.Frame):
             # the whole data set.
             # 
             if self.ymin_control.is_auto():
-                ymins[n] = np.zeros(min(len(self.data[n]),(xmax[m]-max(xmin[n],0))),float)
+                ymins.append([])                
+                ymins[n].append(np.zeros(min(len(self.data[n]),(xmax[n]-max(xmin[n],0))),float))
                 for i in range(min(len(self.data[n]),xmax[n]-max(xmin[n],0))):
+                    print n,i,'-',len(ymins),len(ymins[n]),'-',len(xmin),'-',len(self.data),len(self.data[n])
                     ymins[n][i] = min(self.data[n][i+max(xmin[n],0)])
-                ymin[n] = min(ymins[n]) - 1
+                ymin.append(min(ymins[n]) - 1)
             else:
-                ymin[n] = int(self.ymin_control.manual_value())
+                ymin.append(int(self.ymin_control.manual_value()))
             
             if self.ymax_control.is_auto():
-                ymaxs[n] = np.zeros(min(len(self.data[n]),(xmax[n]-max(xmin[n],0))),float)
+                ymaxs.append(np.zeros(min(len(self.data[n]),(xmax[n]-max(xmin[n],0))),float))
                 for i in range(min(len(self.data[n]),xmax[n]-max(xmin[n],0))):
                     ymaxs[n][i] = max(self.data[n][i+max(xmin[n],0)])
-                ymax[n] = max(ymaxs[n]) + 1
+                ymax.append(max(ymaxs[n]) + 1)
             else:
-                ymax[n] = int(self.ymax_control.manual_value())
+                ymax.append(int(self.ymax_control.manual_value()))
     
-            if self.plot_choice_control.is_auto():
-                if len(self.data[n]) > 1: 
-                    self.plot_index = (self.plot_index+1) % len(self.data[n][0,:]);
-                    self.axes[n].set_title('SAS Temperature Data', size=12)
-            else:
-                self.plot_index = int(self.plot_choice_control.manual_value())
-                self.axes[n].set_title('SAS Temperature Data ' + str(self.plot_index), size=12)
+            #if self.plot_choice_control.is_auto():
+                #if len(self.data[n]) > 1: 
+                    #self.plot_index = (self.plot_index+1) % len(self.data[n][0,:]);
+            self.axes[n].set_title('SAS Temperature Data', size=12)
+            #else:
+                #self.plot_index = int(self.plot_choice_control.manual_value())
+                #self.axes[n].set_title('SAS Temperature Data ' + str(self.plot_index), size=12)
             
     
             self.axes[n].set_xbound(lower=xmin[n], upper=xmax[n])
@@ -284,16 +303,17 @@ class GraphFrame(wx.Frame):
             pylab.setp(self.axes[n].get_xticklabels(), 
                 visible=self.cb_xlab.IsChecked())
             
-            for i in range(np.size(self.data[n],1)):        
+            for i in range(len(self.data[n])):        
                 self.plot_data[n][i].set_xdata(np.arange(len(self.data[n])))
-            if isinstance(self.data[n], np.ndarray) and len(self.data[n]) > 1:
-                for i in range(np.size(self.data,1)):
+                print len(self.data[n][i])                
+                if isinstance(self.data[n], np.ndarray) and len(self.data[n]) > 1:
+                #for i in range(len(self.data[n])):
                     #self.plot_data.set_ydata(self.data[:,self.plot_index])
                     self.plot_data[n][i].set_ydata(self.data[n][:,i]);
-            else: 
-                for i in range(np.size(self.data,1)):
+                else: 
+                #for i in range(len(self.data[n])):
                     self.plot_data[n][i].set_ydata(np.ones(len(self.data[n])))
-        
+                    
         self.canvas.draw()
     
     def on_pause_button(self, event):
@@ -338,11 +358,12 @@ class GraphFrame(wx.Frame):
             if isinstance(data, np.ndarray) and not isinstance(self.data, np.ndarray):
                 self.data = data
             if isinstance(data, np.ndarray) and isinstance(self.data, np.ndarray):
-                for n in range(len(self.axes)):                
+                for n in range(self.numplots):                
                     if (len(self.data[n]) < RECORD_LENGTH_MAX):
-                        self.data = np.vstack((self.data[n], data[n]))
+                        self.data[n] = np.vstack((self.data[n], data[n]))
+                        print np.size(self.data[n],1)
                     else:
-                        self.data = np.vstack((self.data[n][1:(RECORD_LENGTH_MAX)],data[n]))
+                        self.data[n] = np.vstack((self.data[n][1:(RECORD_LENGTH_MAX)],data[n]))
                         if np.any(data < alarm_temp):
                             sys.stdout.write('\a')
                             sys.stdout.flush()

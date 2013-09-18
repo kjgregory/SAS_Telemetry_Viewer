@@ -159,7 +159,7 @@ class SAS_TM_Parser(object):
             #Thread(target=receiving, args=(self.ser,)).start()
         
     def next(self):
-        if False:#self.validsocket:        
+        if self.validsocket:        
             while True:
                 self.rawpacket, addr = self.sock.recvfrom(1024)
                 length = len(self.rawpacket)
