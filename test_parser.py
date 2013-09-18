@@ -8,7 +8,7 @@ while True:
         print "you done goofed"
         break
     time = sock.timestamps
-    print "Time: ", (time - (np.floor(time))
+    print "Time: ", (time - (np.floor(time)))
     print "Packets Received: ", sock.numpackets
     print "Packet SeqNumber: ", sock.sequence
     for plot in range (0, len(data)):

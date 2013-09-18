@@ -9,7 +9,7 @@ import socket
 #import datetime
 # from numpy import *
 import numpy as np
-
+import time as t
 import struct
 
 last_received = ''
@@ -123,7 +123,7 @@ class SAS_TM_Parser(object):
     def __init__(self):
         #try:
         self.UDP_IP = ''
-        self.UDP_Port = 2003
+        self.UDP_Port = 2002
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.sock.bind((self.UDP_IP,self.UDP_Port))
@@ -153,6 +153,8 @@ class SAS_TM_Parser(object):
                 self.labels[s].append(self.titles[s] + " " + self.canLabels[k])
         self.labels[2] = self.cameraLabels
 
+        # Timeout limit in seconds
+        self.timeoutLimit = 30
         #except serial.serialutil.SerialException:
             #no serial connection
             #self.ser = None
@@ -160,7 +162,8 @@ class SAS_TM_Parser(object):
             #Thread(target=receiving, args=(self.ser,)).start()
         
     def next(self):
-        if self.validsocket:        
+        startTime = t.time()
+        if False:#self.validsocket:        
             while True:
                 self.rawpacket, addr = self.sock.recvfrom(1024)
                 length = len(self.rawpacket)
@@ -184,6 +187,9 @@ class SAS_TM_Parser(object):
                                 self.cameraTemps[1+idx] = self.packet.housekeeping[1]
 
                     break
+                if ((t.time() - startTime) > self.timeoutLimit):
+                    break
+                
         else:
             self.canTemps = self.canTemps + [np.linspace(0.1,0.7,7),np.linspace(0.9,1.5,7)]
             self.cameraTemps = self.cameraTemps + [0.8, 1.6, 1.7]

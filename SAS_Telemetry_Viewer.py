@@ -27,7 +27,7 @@ import os
 import sys
 import wx
 
-REFRESH_INTERVAL_MS = 500
+REFRESH_INTERVAL_MS = 1000
 RECORD_LENGTH_MAX = 100000
 
 # The recommended way to use wx with mpl is with the WXAgg
@@ -102,20 +102,15 @@ class GraphFrame(wx.Frame):
         wx.Frame.__init__(self, None, -1, self.title)
         
         self.datagen = DataGen()
-        data = self.datagen.next()
-        
-        self.data = data;
-        #if isinstance(data, np.ndarray):
-            #self.data = data
-        #else: 
-            #self.data = [100]
+        self.data = []
+        data = self.datagen.data
+        for n in range(len(data)):
+            column = (np.array(data[n], ndmin=2)).transpose()
+            self.data.append(np.hstack((column, column)))
             
-            
-        data = self.datagen.next()
-        for n in range(len(self.data)):
-            self.data[n] = np.vstack((self.data[n], data[n]))
         
         self.numplots = len(self.datagen.labels)
+        self.plotTitles = self.datagen.titles
         
         self.paused = False
         
@@ -215,7 +210,7 @@ class GraphFrame(wx.Frame):
         labels = self.datagen.labels
         for n in range(len(self.data)):
             self.plot_data.append([])
-            for i in range(len(self.data[n])):
+            for i in range(self.data[n].shape[0]):
                 self.plot_data[n].append(self.axes[n].plot(np.arange(10),
                                                      linewidth=1,
                                                      label=labels[n][i],
@@ -277,7 +272,7 @@ class GraphFrame(wx.Frame):
             #if self.plot_choice_control.is_auto():
                 #if len(self.data[n]) > 1: 
                     #self.plot_index = (self.plot_index+1) % len(self.data[n][0,:]);
-            self.axes[n].set_title('SAS Temperature Data', size=12)
+            self.axes[n].set_title(self.plotTitles[n], size=12)
             #else:
                 #self.plot_index = int(self.plot_choice_control.manual_value())
                 #self.axes[n].set_title('SAS Temperature Data ' + str(self.plot_index), size=12)
@@ -302,17 +297,14 @@ class GraphFrame(wx.Frame):
             #  
             pylab.setp(self.axes[n].get_xticklabels(), 
                 visible=self.cb_xlab.IsChecked())
-            
-            for i in range(len(self.data[n])):        
-                self.plot_data[n][i].set_xdata(np.arange(len(self.data[n])))
-                print len(self.data[n][i])                
-                if isinstance(self.data[n], np.ndarray) and len(self.data[n]) > 1:
-                #for i in range(len(self.data[n])):
-                    #self.plot_data.set_ydata(self.data[:,self.plot_index])
-                    self.plot_data[n][i].set_ydata(self.data[n][:,i]);
+            for i in range(self.data[n].shape[0]):
+                self.plot_data[n][i].set_xdata(np.arange(self.data[n].shape[1]))
+                                
+                if isinstance(self.data[n], np.ndarray) and self.data[n].shape[1] > 1:
+
+                    self.plot_data[n][i].set_ydata(self.data[n][i][:]);
                 else: 
-                #for i in range(len(self.data[n])):
-                    self.plot_data[n][i].set_ydata(np.ones(len(self.data[n])))
+                    self.plot_data[n][i].set_ydata(np.ones(self.data[n].shape[1]))
                     
         self.canvas.draw()
     
@@ -355,19 +347,16 @@ class GraphFrame(wx.Frame):
             alarm_temp = int(self.alarm_control.manual_value())
         if not self.paused:
             data = self.datagen.next()
-            if isinstance(data, np.ndarray) and not isinstance(self.data, np.ndarray):
-                self.data = data
-            if isinstance(data, np.ndarray) and isinstance(self.data, np.ndarray):
-                for n in range(self.numplots):                
-                    if (len(self.data[n]) < RECORD_LENGTH_MAX):
-                        self.data[n] = np.vstack((self.data[n], data[n]))
-                        print np.size(self.data[n],1)
-                    else:
-                        self.data[n] = np.vstack((self.data[n][1:(RECORD_LENGTH_MAX)],data[n]))
-                        if np.any(data < alarm_temp):
-                            sys.stdout.write('\a')
-                            sys.stdout.flush()
-        self.draw_plot()
+            for n in range(self.numplots):
+                column = (np.array(data[n], ndmin=2)).transpose()
+                if (len(self.data[n]) < RECORD_LENGTH_MAX):
+                    self.data[n] = np.hstack((self.data[n], column))
+                else:
+                    self.data[n] = np.hstack((self.data[n][1:(RECORD_LENGTH_MAX)], column))
+                    if np.any(data < alarm_temp):
+                        sys.stdout.write('\a')
+                        sys.stdout.flush()
+            self.draw_plot()
     
     def on_exit(self, event):
         self.Destroy()
