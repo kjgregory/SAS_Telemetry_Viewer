@@ -7,6 +7,10 @@ while True:
     if len(data) != len(labels):
         print "you done goofed"
         break
+    time = sock.timestamps
+    print "Time: ", (time - (np.floor(time))
+    print "Packets Received: ", sock.numpackets
+    print "Packet SeqNumber: ", sock.sequence
     for plot in range (0, len(data)):
         for channel in range(0, len(data[plot][:])):
             print labels[plot][channel], ": ", data[plot][channel]
