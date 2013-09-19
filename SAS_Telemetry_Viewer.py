@@ -28,7 +28,7 @@ import sys
 import wx
 
 REFRESH_INTERVAL_MS = 500
-RECORD_LENGTH_MAX = 100000
+RECORD_LENGTH_MAX = 10000
 plotColors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
 # The recommended way to use wx with mpl is with the WXAgg
 # backend. 
@@ -61,9 +61,9 @@ class BoundControlBox(wx.Panel):
         sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
         
         self.radio_auto = wx.RadioButton(self, -1, 
-            label="Auto", style=wx.RB_GROUP)
+            label="Full", style=wx.RB_GROUP)
         self.radio_manual = wx.RadioButton(self, -1,
-            label="Manual")
+            label="Window")
         self.manual_text = wx.TextCtrl(self, -1, 
             size=(35,-1),
             value=str(initValue),
@@ -329,7 +329,7 @@ class GraphFrame(wx.Frame):
             xdata = []
             for i in range(self.time[n].shape[0]):
                 if isinstance(self.time[n], np.ndarray) and self.time[n].shape[1] > 1:
-                    xdata.append( self.time[n][i][:] )
+                    xdata.append( self.time[n][i,:] )
                 else:
                     xdata.append( (self.time[n].shape[1]) )
                 xmins.append(min(xdata[i]))
@@ -363,7 +363,7 @@ class GraphFrame(wx.Frame):
             # Generate ydata
             for i in range(self.data[n].shape[0]):
                 if isinstance(self.data[n], np.ndarray) and self.data[n].shape[1] > 1:
-                    ydata = self.data[n][i][idxMin[i]:idxMax[i]]
+                    ydata = self.data[n][i,idxMin[i]:idxMax[i]]
                 else:
                     ydata = np.ones(idxMax[i]-idxMin[i])
                 ymins.append(min(ydata))
@@ -435,15 +435,12 @@ class GraphFrame(wx.Frame):
             for n in range(self.numplots):
                 newData = (np.array(data[n], ndmin=2)).transpose()
                 newTime = (np.array(time[n], ndmin=2)).transpose()
-                if (len(self.data[n]) < RECORD_LENGTH_MAX):
+                if (self.data[n].shape[1] < RECORD_LENGTH_MAX):
                     self.data[n] = np.hstack((self.data[n], newData))
                     self.time[n] = np.hstack((self.time[n], newTime))
                 else:
-                    self.data[n] = np.hstack((self.data[n][1:(RECORD_LENGTH_MAX)], newData))
-                    self.time[n] = np.hstack((self.time[n][1:(RECORD_LENGTH_MAX)], newTime))
-                    if np.any(data < alarm_temp):
-                        sys.stdout.write('\a')
-                        sys.stdout.flush()
+                    self.data[n] = np.hstack((self.data[n][:,1:], newData))
+                    self.time[n] = np.hstack((self.time[n][:,1:], newTime))
             self.draw_plot()
     
     def on_exit(self, event):
