@@ -3,16 +3,13 @@ import numpy as np
 sock = parser()
 labels = sock.labels
 while True:
-    data = sock.next()
+    data, time = sock.next()
     if len(data) != len(labels):
         print "you done goofed"
         break
-    time = sock.timestamps
-    print "Time: ", (time - (np.floor(time)))
+    
     print "Packets Received: ", sock.numpackets
     print "Packet SeqNumber: ", sock.sequence
-    for plot in range (0, len(data)):
-        for channel in range(0, len(data[plot][:])):
-            print labels[plot][channel], ": ", data[plot][channel]
-
-        
+    for plot in range (len(data)):
+        for channel in range(len(data[plot])):
+            print "@", time[plot][channel], " ", labels[plot][channel], ": ", data[plot][channel]

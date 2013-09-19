@@ -14,6 +14,9 @@ import struct
 
 last_received = ''
 timer = 0
+sock_timeout = 10
+sas_timeout = 20
+port = 2002
 
 class heroesHeader:
     def __init__(self):
@@ -123,10 +126,11 @@ class SAS_TM_Parser(object):
     def __init__(self):
         #try:
         self.UDP_IP = ''
-        self.UDP_Port = 2003
+        self.UDP_Port = port
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.sock.bind((self.UDP_IP,self.UDP_Port))
+            self.sock.settimeout(sock_timeout)
             self.validsocket = True
         except:
             print "Can't create socket"
@@ -135,14 +139,19 @@ class SAS_TM_Parser(object):
         self.rawpacket = ''
         
         self.numpackets = np.zeros(2,int)
-        self.timestamps = np.zeros(2,float)
         self.sequence = np.zeros(2,int)
         self.packet = sasPacket()
 
         self.canTemps = np.zeros((2,7), float)
         self.cameraTemps = np.zeros((3), float)
-        self.data = [self.canTemps[0][:], self.canTemps[1][:], self.cameraTemps]
+        self.data = [self.canTemps[0][:], 
+                     self.canTemps[1][:], 
+                     self.cameraTemps]
+        self.timestamps = [np.zeros(7, float), 
+                           np.zeros(7, float),
+                           np.zeros(3, float)]
 
+        self.fullOfData = False
         self.canLabels = ["CPU", "CPU Heatsink", "Can", "HDD", "Heater Plate", "Air", "Rail"]
         self.cameraLabels = ["PYAS-F", "PYAS-R", "RAS"]
         self.titles = ["SAS 1", "SAS 2", "Cameras"]
@@ -154,18 +163,18 @@ class SAS_TM_Parser(object):
         self.labels[2] = self.cameraLabels
 
         # Timeout limit in seconds
-        self.timeoutLimit = 30
-        #except serial.serialutil.SerialException:
-            #no serial connection
-            #self.ser = None
-        #else:
-            #Thread(target=receiving, args=(self.ser,)).start()
+        self.sasTimeout = sas_timeout
         
     def next(self):
         startTime = t.time()
-        if self.validsocket:        
+        if self.validsocket:
             while True:
-                self.rawpacket, addr = self.sock.recvfrom(1024)
+                if (t.time() - startTime) > self.sasTimeout:
+                    break
+                try:
+                    self.rawpacket, addr = self.sock.recvfrom(1024)
+                except:
+                    break
                 length = len(self.rawpacket)
                 # print "Got a packet of length ", length
                 valid = self.packet.read(self.rawpacket)
@@ -173,34 +182,37 @@ class SAS_TM_Parser(object):
                     sas = self.packet.sasID -1
                     self.numpackets[sas] += 1
                     
-                    self.timestamps[sas] = self.packet.header.timeSec + self.packet.header.timeNano*1e-9
+                    timestamp = self.packet.header.timeSec + self.packet.header.timeNano*1e-9
                     self.sequence[sas] = self.packet.telemSeqNum
 
                     idx = self.packet.telemSeqNum % 8
-                    # print "SAS: ", sas+1, " HKidx: ", idx, " Data: ", self.packet.housekeeping[0], " ", self.packet.housekeeping[1]
                     if (idx < 7):
                         self.canTemps[sas][idx] = self.packet.housekeeping[0]
+                        self.timestamps[sas][idx] = timestamp
                         if (idx < 2):
                             if (sas == 0):
                                 self.cameraTemps[0] = self.packet.housekeeping[1]
+                                self.timestamps[2][0] = timestamp
                             else:
                                 self.cameraTemps[1+idx] = self.packet.housekeeping[1]
-
-                    break
-                if ((t.time() - startTime) > self.timeoutLimit):
-                    break
+                                self.timestamps[2][1+idx] = timestamp
+                    if self.fullOfData:
+                        break
+                    else:
+                        self.fullOfData = True
+                        for n in range(len(self.timestamps)):
+                            for c in range(len(self.timestamps[n])):
+                                self.fullOfData &= (self.timestamps[n][c] != 0)
                 
         else:
             self.canTemps = self.canTemps + [np.linspace(0.1,0.7,7),np.linspace(0.9,1.5,7)]
             self.cameraTemps = self.cameraTemps + [0.8, 1.6, 1.7]
+            for n in range(len(self.timestamps)):
+                for c in range(len(self.timestamps[n])):
+                    self.timestamps[n][c] += 1
 
-        # for s in range (0, 2):
-        #     for k in range (0, 7):
-        #         print self.titles[s], self.canLabels[k], self.canTemps[s][k]
-        # for c in range (0, 3):
-        #     print self.cameraLabels[c], self.cameraTemps[c]
         self.data = [self.canTemps[0][:], self.canTemps[1][:], self.cameraTemps]
-        return self.data
+        return self.data, self.timestamps
         
 
     def __del__(self):

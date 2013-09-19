@@ -27,7 +27,7 @@ import os
 import sys
 import wx
 
-REFRESH_INTERVAL_MS = 100
+REFRESH_INTERVAL_MS = 500
 RECORD_LENGTH_MAX = 100000
 
 # The recommended way to use wx with mpl is with the WXAgg
@@ -103,11 +103,15 @@ class GraphFrame(wx.Frame):
         
         self.datagen = DataGen()
         self.data = []
-        data = self.datagen.data
+        self.time = []
+        data, time = self.datagen.next()
         for n in range(len(data)):
-            column = (np.array(data[n], ndmin=2)).transpose()
-            self.data.append(np.hstack((column, column)))
-            
+            newData = (np.array(data[n], ndmin=2)).transpose()
+            newTime = (np.array(time[n], ndmin=2)).transpose()
+            self.data.append(newData)
+            self.time.append(newTime)
+            print self.data[n].shape
+            print self.time[n].shape
         
         self.numplots = len(self.datagen.labels)
         self.plotTitles = self.datagen.titles
@@ -230,14 +234,14 @@ class GraphFrame(wx.Frame):
         xmin = []
         ymin = []
         ymax = []
-                 
+        
         for n in range(self.numplots):
-            
-            xmins = []
+
             xmaxs = []
+            xmins = []
             ymins = []
             ymaxs = []
-    
+
             #if self.plot_choice_control.is_auto():
                 #if len(self.data[n]) > 1: 
                     #self.plot_index = (self.plot_index+1) % len(self.data[n][0,:]);
@@ -262,9 +266,16 @@ class GraphFrame(wx.Frame):
             #  
             pylab.setp(self.axes[n].get_xticklabels(), 
                 visible=self.cb_xlab.IsChecked())
-            xdata = np.arange(self.data[n].shape[1])
-            xmins.append(min(xdata))
-            xmaxs.append(max(xdata))
+ 
+            for i in range(self.time[n].shape[0]):
+                if isinstance(self.time[n], np.ndarray) and self.time[n].shape[1] > 1:
+                    xdata = self.time[n][i][:]
+                    print len(xdata)
+                else:
+                    xdata = np.ones(self.time[n].shape[1])
+                xmins.append(min(xdata))
+                xmaxs.append(max(xdata))
+                self.plot_data[n][i].set_xdata(xdata)
 
             # Generate xmin and xmax        
             if self.xmax_control.is_auto():
@@ -277,21 +288,15 @@ class GraphFrame(wx.Frame):
             else:
                 xmin.append(self.xmin_control.manual_value())
 
-
-
+            # Generate ydata
             for i in range(self.data[n].shape[0]):
-                self.plot_data[n][i].set_xdata(xdata)
-                
                 if isinstance(self.data[n], np.ndarray) and self.data[n].shape[1] > 1:
                     ydata = self.data[n][i][:]
+                    print len(ydata)
                 else:
                     ydata = np.ones(self.data[n].shape[1])
-                if (xmin[n] >= 0) & (xmax[n] > 0) & (xmax[n] > xmin[n]):
-                    ymins.append(min(ydata[xmin[n]:xmax[n]]))
-                    ymaxs.append(max(ydata[xmin[n]:xmax[n]]))
-                else:
-                    ymins.append(min(ydata))
-                    ymaxs.append(max(ydata))
+                ymins.append(min(ydata))
+                ymaxs.append(max(ydata))
                 self.plot_data[n][i].set_ydata(ydata)
                  
 
@@ -357,13 +362,16 @@ class GraphFrame(wx.Frame):
         else:
             alarm_temp = int(self.alarm_control.manual_value())
         if not self.paused:
-            data = self.datagen.next()
+            data, time = self.datagen.next()
             for n in range(self.numplots):
-                column = (np.array(data[n], ndmin=2)).transpose()
+                newData = (np.array(data[n], ndmin=2)).transpose()
+                newTime = (np.array(time[n], ndmin=2)).transpose()
                 if (len(self.data[n]) < RECORD_LENGTH_MAX):
-                    self.data[n] = np.hstack((self.data[n], column))
+                    self.data[n] = np.hstack((self.data[n], newData))
+                    self.time[n] = np.hstack((self.time[n], newTime))
                 else:
-                    self.data[n] = np.hstack((self.data[n][1:(RECORD_LENGTH_MAX)], column))
+                    self.data[n] = np.hstack((self.data[n][1:(RECORD_LENGTH_MAX)], newData))
+                    self.time[n] = np.hstack((self.time[n][1:(RECORD_LENGTH_MAX)], newTime))
                     if np.any(data < alarm_temp):
                         sys.stdout.write('\a')
                         sys.stdout.flush()
