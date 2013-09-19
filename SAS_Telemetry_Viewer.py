@@ -311,13 +311,19 @@ class GraphFrame(wx.Frame):
             else:
                 ymax.append(int(self.ymax_control.manual_value()))        
 
-            self.axes[n].xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%Y'))
-            self.axes[n].xaxis.set_major_locator(mdates.DayLocator())
-            self.axes[n].xaxis.set_minor_locator(mdates.DateFormatter('%h/%m/%s'))
-            self.axes[n].xaxis.set_minor_locator(mdates.MinuteLocator(interval=10))
+
+            # Set x and y bounds for each plot
             self.axes[n].set_xbound(lower=dt.datetime.fromtimestamp(xmin[n]), 
                                     upper=dt.datetime.fromtimestamp(xmax[n]))
             self.axes[n].set_ybound(lower=ymin[n], upper=ymax[n])
+
+            # self.axes[n].xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%Y'))
+            # self.axes[n].xaxis.set_major_locator(mdates.MinuteLocator())
+            # self.axes[n].xaxis.set_minor_formatter(mdates.DateFormatter('%H:%M:%S'))
+            # self.axes[n].xaxis.set_minor_locator(mdates.SecondLocator(interval=10))
+
+            # pylab.setp(self.axes[n].get_xticklabels(), fontsize=8)
+            # pylab.setp(self.axes[n].get_yticklabels(), fontsize=8)
 
 
         self.fig.autofmt_xdate()
