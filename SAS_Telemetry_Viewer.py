@@ -35,12 +35,15 @@ RECORD_LENGTH_MAX = 100000
 #
 import matplotlib
 matplotlib.use('WXAgg')
+import matplotlib.dates as mdates
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import \
     FigureCanvasWxAgg as FigCanvas, \
     NavigationToolbar2WxAgg as NavigationToolbar
 import numpy as np
 import pylab
+import datetime as dt
+from dateutil import rrule
 #Data comes from here
 from SAS_TM_Parser import SAS_TM_Parser as DataGen
 
@@ -202,8 +205,8 @@ class GraphFrame(wx.Frame):
         for n in range(self.numplots):
             self.axes.append(self.fig.add_subplot(1,self.numplots,n+1))
             self.axes[n].set_title('SAS Temperature Data ' + str(n), size=12)
-            pylab.setp(self.axes[n].get_xticklabels(), fontsize=8)
-            pylab.setp(self.axes[n].get_yticklabels(), fontsize=8)
+            # pylab.setp(self.axes[n].get_xticklabels(), fontsize=8)
+            # pylab.setp(self.axes[n].get_yticklabels(), fontsize=8)
 
         # plot the data as a line series, and save the reference 
         # to the plotted line series
@@ -212,12 +215,14 @@ class GraphFrame(wx.Frame):
         labels = self.datagen.labels
         for n in range(len(self.data)):
             self.plot_data.append([])
+            faketime = list(rrule.rrule(rrule.DAILY,count=10,dtstart=dt.datetime.utcnow()))
             for i in range(self.data[n].shape[0]):
-                self.plot_data[n].append(self.axes[n].plot(np.arange(10),
-                                                     linewidth=1,
-                                                     label=labels[n][i],
-                                                     #color=(1, 1, 0),  #let it auto-select colors
-                                                     )[0])
+                self.plot_data[n].append(self.axes[n].plot_date(faketime,
+                                                                np.arange(10),
+                                                                linewidth=1,
+                                                                label=labels[n][i],
+                                                                #color=(1, 1, 0),  #let it auto-select colors
+                                                                )[0])
             self.axes[n].legend(loc='best',fontsize=6,ncol=3,)
         self.plot_index = 0
 
@@ -272,7 +277,7 @@ class GraphFrame(wx.Frame):
                     xdata = np.ones(self.time[n].shape[1])
                 xmins.append(min(xdata))
                 xmaxs.append(max(xdata))
-                self.plot_data[n][i].set_xdata(xdata)
+                self.plot_data[n][i].set_xdata(np.array([dt.datetime.fromtimestamp(x) for x in xdata]))
 
             # Generate xmin and xmax        
             if self.xmax_control.is_auto():
@@ -314,10 +319,12 @@ class GraphFrame(wx.Frame):
                 ymax.append(max(ymaxs) + 1)
             else:
                 ymax.append(int(self.ymax_control.manual_value()))        
-
-            self.axes[n].set_xbound(lower=xmin[n], upper=xmax[n])
+            self.axes[n].xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%Y'))
+            self.axes[n].xaxis.set_major_locator(mdates.DayLocator())
+            self.axes[n].set_xbound(lower=dt.datetime.fromtimestamp(xmin[n]), 
+                                    upper=dt.datetime.fromtimestamp(xmax[n]))
             self.axes[n].set_ybound(lower=ymin[n], upper=ymax[n])
-
+        self.fig.autofmt_xdate()
         self.canvas.draw()
     
     def on_pause_button(self, event):

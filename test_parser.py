@@ -1,5 +1,6 @@
 from SAS_TM_Parser import SAS_TM_Parser as parser
 import numpy as np
+import datetime as YES
 sock = parser()
 labels = sock.labels
 while True:
@@ -12,4 +13,4 @@ while True:
     print "Packet SeqNumber: ", sock.sequence
     for plot in range (len(data)):
         for channel in range(len(data[plot])):
-            print "@", time[plot][channel], " ", labels[plot][channel], ": ", data[plot][channel]
+            print "@", YES.datetime.fromtimestamp(time[plot][channel]), ": ", data[plot][channel]
