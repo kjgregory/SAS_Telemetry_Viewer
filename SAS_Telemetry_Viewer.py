@@ -196,7 +196,6 @@ class GraphFrame(wx.Frame):
 
     def init_plot(self):
         self.dpi = 100
-#        self.fig = Figure((3.0, 3.0), dpi=self.dpi)
         self.fig = Figure(dpi=self.dpi)
         self.axes = []
         
@@ -244,7 +243,7 @@ class GraphFrame(wx.Frame):
             #if self.plot_choice_control.is_auto():
                 #if len(self.data[n]) > 1: 
                     #self.plot_index = (self.plot_index+1) % len(self.data[n][0,:]);
-# self.axes[n].set_title(self.plotTitles[n], size=12)
+            self.axes[n].set_title(self.plotTitles[n], size=12)
             #else:
                 #self.plot_index = int(self.plot_choice_control.manual_value())
                 #self.axes[n].set_title('SAS Temperature Data ' + str(self.plot_index), size=12)
