@@ -52,10 +52,11 @@ class DataBoundControlBox(wx.Panel):
         box. Allows to switch between an automatic mode and a 
         manual mode with an associated value.
     """
-    def __init__(self, parent, ID, label, initval):
+    def __init__(self, parent, ID, label, initMin, initMax):
         wx.Panel.__init__(self, parent, ID)
         
-        self.value = initval
+        self.minValue = initMin
+        self.maxValue = initMax
         
         box = wx.StaticBox(self, -1, label)
         sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
@@ -64,35 +65,51 @@ class DataBoundControlBox(wx.Panel):
             label="Auto", style=wx.RB_GROUP)
         self.radio_manual = wx.RadioButton(self, -1,
             label="Manual")
-        self.manual_text = wx.TextCtrl(self, -1, 
+        self.min_text = wx.TextCtrl(self, -1, 
             size=(35,-1),
-            value=str(initval),
+            value=str(initMin),
+            style=wx.TE_PROCESS_ENTER)
+        self.max_text = wx.TextCtrl(self, -1, 
+            size=(35,-1),
+            value=str(initMax),
             style=wx.TE_PROCESS_ENTER)
         
-        self.Bind(wx.EVT_UPDATE_UI, self.on_update_manual_text, self.manual_text)
-        self.Bind(wx.EVT_TEXT_ENTER, self.on_text_enter, self.manual_text)
+        self.Bind(wx.EVT_UPDATE_UI, self.on_update_manual_text, self.min_text)
+        self.Bind(wx.EVT_UPDATE_UI, self.on_update_manual_text, self.max_text)
+        self.Bind(wx.EVT_TEXT_ENTER, self.on_text_enter, self.min_text)
+        self.Bind(wx.EVT_TEXT_ENTER, self.on_text_enter, self.max_text)
         
-        manual_box = wx.BoxSizer(wx.HORIZONTAL)
-        manual_box.Add(self.radio_manual, flag=wx.ALIGN_CENTER_VERTICAL)
-        manual_box.Add(self.manual_text, flag=wx.ALIGN_CENTER_VERTICAL)
+        radio_box = wx.BoxSizer(wx.HORIZONTAL)
+        radio_box.Add(self.radio_auto, flag=wx.HORIZONTAL)
+        radio_box.Add(self.radio_manual, flag=wx.HORIZONTAL)
+
+        text_box = wx.BoxSizer(wx.HORIZONTAL)
+        text_box.Add(self.min_text, flag=wx.HORIZONTAL)
+        text_box.AddSpacer(12)
+        text_box.Add(self.max_text, flag=wx.HORIZONTAL)
         
-        sizer.Add(self.radio_auto, 0, wx.ALL, 10)
-        sizer.Add(manual_box, 0, wx.ALL, 10)
+        sizer.Add(radio_box, 0, wx.ALL, 10)
+        sizer.Add(text_box, 0, wx.ALL, 10)
         
         self.SetSizer(sizer)
         sizer.Fit(self)
     
     def on_update_manual_text(self, event):
-        self.manual_text.Enable(self.radio_manual.GetValue())
+        self.min_text.Enable(self.radio_manual.GetValue())
+        self.max_text.Enable(self.radio_manual.GetValue())
     
     def on_text_enter(self, event):
-        self.value = self.manual_text.GetValue()
+        self.minValue = self.min_text.GetValue()
+        self.maxValue = self.max_text.GetValue()
     
     def is_auto(self):
         return self.radio_auto.GetValue()
         
-    def manual_value(self):
-        return self.value
+    def min_value(self):
+        return self.minValue
+
+    def max_value(self):
+        return self.maxValue
 
 
 class GraphFrame(wx.Frame):
@@ -145,12 +162,11 @@ class GraphFrame(wx.Frame):
         self.init_plot()
         self.canvas = FigCanvas(self.panel, -1, self.fig)
 
-        self.xmin_control = DataBoundControlBox(self.panel, -1, "X min", 0)
-        self.xmax_control = DataBoundControlBox(self.panel, -1, "X max", 50)
-        self.ymin_control = DataBoundControlBox(self.panel, -1, "Y min", 0)
-        self.ymax_control = DataBoundControlBox(self.panel, -1, "Y max", 100)
-        self.plot_choice_control = DataBoundControlBox(self.panel, -1, "Sensor", 0)
-        self.alarm_control = DataBoundControlBox(self.panel, -1, "Alarm", -30)
+        self.xbound_control = DataBoundControlBox(self.panel, -1, "X Bounds", 0, 50)
+
+        self.ybound_control = []
+        for n in range(self.numplots):
+            self.ybound_control.append(DataBoundControlBox(self.panel, -1, self.plotTitles[n] + " Y Bounds", 0, 100))
 
         self.pause_button = wx.Button(self.panel, -1, "Pause")
         self.Bind(wx.EVT_BUTTON, self.on_pause_button, self.pause_button)
@@ -176,14 +192,13 @@ class GraphFrame(wx.Frame):
         self.hbox1.Add(self.cb_xlab, border=5, flag=wx.ALL | wx.ALIGN_CENTER_VERTICAL)
         
         self.hbox2 = wx.BoxSizer(wx.HORIZONTAL)
-        self.hbox2.Add(self.xmin_control, border=5, flag=wx.ALL)
-        self.hbox2.Add(self.xmax_control, border=5, flag=wx.ALL)
+        self.hbox2.Add(self.xbound_control, border=5, flag=wx.ALL)
+        # self.hbox2.Add(self.xmax_control, border=5, flag=wx.ALL)
         self.hbox2.AddSpacer(24)
-        self.hbox2.Add(self.ymin_control, border=5, flag=wx.ALL)
-        self.hbox2.Add(self.ymax_control, border=5, flag=wx.ALL)
-        self.hbox2.AddSpacer(24)
-        self.hbox2.Add(self.plot_choice_control, border=5, flag=wx.ALL)
-        self.hbox2.Add(self.alarm_control, border=5, flag=wx.ALL)
+        for n in range(self.numplots):
+            self.hbox2.Add(self.ybound_control[n], border=5, flag=wx.ALL)
+            self.hbox2.AddSpacer(6)
+        # self.hbox2.Add(self.ymax_control, border=5, flag=wx.ALL)
 
         self.vbox = wx.BoxSizer(wx.VERTICAL)
         self.vbox.Add(self.canvas, 1, flag=wx.LEFT | wx.TOP | wx.GROW)        
@@ -271,15 +286,13 @@ class GraphFrame(wx.Frame):
                 xmaxs.append(max(xdata[i]))
 
             # Generate xmin and xmax        
-            if self.xmax_control.is_auto():
+            if self.xbound_control.is_auto():
                 xmax.append(max(xmaxs))
-            else:
-                xmax.append(int(self.xmax_control.manual_value()))
-                
-            if self.xmin_control.is_auto():            
                 xmin.append(min(xmins))
             else:
-                xmin.append(self.xmin_control.manual_value())
+                xmax.append(int(self.xbound_control.min_value()))
+                xmin.append(self.xbound_control.max_value())
+
 
             # Set bounds on x axis
 
@@ -317,15 +330,13 @@ class GraphFrame(wx.Frame):
             # the whole data set.
             # 
             
-            if self.ymin_control.is_auto():
+            if self.ybound_control[n].is_auto():
                 ymin.append(min(ymins) - 5)
-            else:
-                ymin.append(int(self.ymin_control.manual_value()))
-            
-            if self.ymax_control.is_auto():
                 ymax.append(max(ymaxs) + 5)
             else:
-                ymax.append(int(self.ymax_control.manual_value()))        
+                ymin.append(int(self.ybound_control[n].min_value()))
+                ymax.append(int(self.ybound_control[n].max_value())) 
+
 
 
             # Set x and y bounds for each plot
@@ -369,10 +380,6 @@ class GraphFrame(wx.Frame):
         # if paused do not add data, but still redraw the plot
         # (to respond to scale modifications, grid change, etc.)
         #
-        if self.alarm_control.is_auto():
-        	alarm_temp = -30
-        else:
-            alarm_temp = int(self.alarm_control.manual_value())
         if not self.paused:
             data, time = self.datagen.next()
             for n in range(self.numplots):
