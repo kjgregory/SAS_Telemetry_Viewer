@@ -84,9 +84,9 @@ class DataBoundControlBox(wx.Panel):
         radio_box.Add(self.radio_manual, flag=wx.HORIZONTAL)
 
         text_box = wx.BoxSizer(wx.HORIZONTAL)
-        text_box.Add(self.min_text, flag=wx.HORIZONTAL)
+        text_box.Add(self.min_text, flag=wx.LEFT)
         text_box.AddSpacer(12)
-        text_box.Add(self.max_text, flag=wx.HORIZONTAL)
+        text_box.Add(self.max_text, flag=wx.RIGHT)
         
         sizer.Add(radio_box, 0, wx.ALL, 10)
         sizer.Add(text_box, 0, wx.ALL, 10)
