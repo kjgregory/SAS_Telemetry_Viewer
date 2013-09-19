@@ -110,8 +110,6 @@ class GraphFrame(wx.Frame):
             newTime = (np.array(time[n], ndmin=2)).transpose()
             self.data.append(newData)
             self.time.append(newTime)
-            print self.data[n].shape
-            print self.time[n].shape
         
         self.numplots = len(self.datagen.labels)
         self.plotTitles = self.datagen.titles
@@ -270,7 +268,6 @@ class GraphFrame(wx.Frame):
             for i in range(self.time[n].shape[0]):
                 if isinstance(self.time[n], np.ndarray) and self.time[n].shape[1] > 1:
                     xdata = self.time[n][i][:]
-                    print len(xdata)
                 else:
                     xdata = np.ones(self.time[n].shape[1])
                 xmins.append(min(xdata))
@@ -292,7 +289,6 @@ class GraphFrame(wx.Frame):
             for i in range(self.data[n].shape[0]):
                 if isinstance(self.data[n], np.ndarray) and self.data[n].shape[1] > 1:
                     ydata = self.data[n][i][:]
-                    print len(ydata)
                 else:
                     ydata = np.ones(self.data[n].shape[1])
                 ymins.append(min(ydata))

@@ -11,6 +11,7 @@ import socket
 import numpy as np
 import time as t
 import struct
+import sys
 
 last_received = ''
 timer = 0
@@ -170,10 +171,12 @@ class SAS_TM_Parser(object):
         if self.validsocket:
             while True:
                 if (t.time() - startTime) > self.sasTimeout:
+                    print "Timeout waiting for SAS HK packet"
                     break
                 try:
                     self.rawpacket, addr = self.sock.recvfrom(1024)
                 except:
+                    print "Timeout on socket"
                     break
                 length = len(self.rawpacket)
                 # print "Got a packet of length ", length
@@ -199,10 +202,22 @@ class SAS_TM_Parser(object):
                     if self.fullOfData:
                         break
                     else:
+                        message = ["Waiting for data   ",
+                                   "Waiting for data.  ",
+                                   "Waiting for data.. ",
+                                   "Waiting for data...",]
+                        sys.stdout.write(message[(self.numpackets[0] % 4)])
+                        sys.stdout.flush()
                         self.fullOfData = True
                         for n in range(len(self.timestamps)):
                             for c in range(len(self.timestamps[n])):
                                 self.fullOfData &= (self.timestamps[n][c] != 0)
+                        if self.fullOfData:
+                            sys.stdout.write( " done!")
+                            sys.stdout.flush()
+                        else:
+                             sys.stdout.write("\r")
+                             sys.stdout.flush()
                 
         else:
             self.canTemps = self.canTemps + [np.linspace(0.1,0.7,7),np.linspace(0.9,1.5,7)]
