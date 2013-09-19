@@ -47,8 +47,7 @@ from dateutil import rrule
 #Data comes from here
 from SAS_TM_Parser import SAS_TM_Parser as DataGen
 
-
-class BoundControlBox(wx.Panel):
+class DataBoundControlBox(wx.Panel):
     """ A static box with a couple of radio buttons and a text
         box. Allows to switch between an automatic mode and a 
         manual mode with an associated value.
@@ -146,12 +145,12 @@ class GraphFrame(wx.Frame):
         self.init_plot()
         self.canvas = FigCanvas(self.panel, -1, self.fig)
 
-        self.xmin_control = BoundControlBox(self.panel, -1, "X min", 0)
-        self.xmax_control = BoundControlBox(self.panel, -1, "X max", 50)
-        self.ymin_control = BoundControlBox(self.panel, -1, "Y min", 0)
-        self.ymax_control = BoundControlBox(self.panel, -1, "Y max", 100)
-        self.plot_choice_control = BoundControlBox(self.panel, -1, "Sensor", 0)
-        self.alarm_control = BoundControlBox(self.panel, -1, "Alarm", -30)
+        self.xmin_control = DataBoundControlBox(self.panel, -1, "X min", 0)
+        self.xmax_control = DataBoundControlBox(self.panel, -1, "X max", 50)
+        self.ymin_control = DataBoundControlBox(self.panel, -1, "Y min", 0)
+        self.ymax_control = DataBoundControlBox(self.panel, -1, "Y max", 100)
+        self.plot_choice_control = DataBoundControlBox(self.panel, -1, "Sensor", 0)
+        self.alarm_control = DataBoundControlBox(self.panel, -1, "Alarm", -30)
 
         self.pause_button = wx.Button(self.panel, -1, "Pause")
         self.Bind(wx.EVT_BUTTON, self.on_pause_button, self.pause_button)
@@ -226,15 +225,16 @@ class GraphFrame(wx.Frame):
                                                                 linestyle='-',
                                                                 )[0])
             self.axes[n].legend(loc='best',fontsize=6,ncol=3,)
+            # self.axes[n].xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%Y'))
+            # self.axes[n].xaxis.set_major_locator(mdates.MinuteLocator())
+            # self.axes[n].xaxis.set_minor_formatter(mdates.DateFormatter('%H:%M:%S'))
+            # self.axes[n].xaxis.set_minor_locator(mdates.SecondLocator(interval=10))
         self.plot_index = 0
 
     def draw_plot(self):
         """ Redraws the plot
         """
-        # when xmin is on auto, it "follows" xmax to produce a 
-        # sliding window effect. therefore, xmin is assigned after
-        # xmax.
-        #
+
         xmax = []
         xmin = []
         ymin = []
@@ -261,14 +261,14 @@ class GraphFrame(wx.Frame):
             pylab.setp(self.axes[n].get_xticklabels(), 
                 visible=self.cb_xlab.IsChecked())
  
+            xdata = []
             for i in range(self.time[n].shape[0]):
                 if isinstance(self.time[n], np.ndarray) and self.time[n].shape[1] > 1:
-                    xdata = self.time[n][i][:]
+                    xdata.append( self.time[n][i][:] )
                 else:
-                    xdata = np.ones(self.time[n].shape[1])
-                xmins.append(min(xdata))
-                xmaxs.append(max(xdata))
-                self.plot_data[n][i].set_xdata(np.array([dt.datetime.fromtimestamp(x) for x in xdata]))
+                    xdata.append( (self.time[n].shape[1]) )
+                xmins.append(min(xdata[i]))
+                xmaxs.append(max(xdata[i]))
 
             # Generate xmin and xmax        
             if self.xmax_control.is_auto():
@@ -281,12 +281,28 @@ class GraphFrame(wx.Frame):
             else:
                 xmin.append(self.xmin_control.manual_value())
 
+            # Set bounds on x axis
+
+            self.axes[n].set_xbound(lower=dt.datetime.fromtimestamp(xmin[n]), 
+                                    upper=dt.datetime.fromtimestamp(xmax[n]))
+
+            # Determine the indicies being displayed
+            idxMin = []
+            idxMax = []
+            for i in range(self.data[n].shape[0]):
+                idxMin.append( np.searchsorted(xdata[i], xmin[n]) )
+                idxMax.append( np.searchsorted(xdata[i], xmax[n]) )
+                # print i, idxMin, idxMax, len(xdata[i])
+                # print xdata[i]
+                # print xdata[i][idxMin:idxMax]
+                self.plot_data[n][i].set_xdata(np.array([dt.datetime.fromtimestamp(x) for x in xdata[i][idxMin[i]:idxMax[i]]]))
+
             # Generate ydata
             for i in range(self.data[n].shape[0]):
                 if isinstance(self.data[n], np.ndarray) and self.data[n].shape[1] > 1:
-                    ydata = self.data[n][i][:]
+                    ydata = self.data[n][i][idxMin[i]:idxMax[i]]
                 else:
-                    ydata = np.ones(self.data[n].shape[1])
+                    ydata = np.ones(idxMax[i]-idxMin[i])
                 ymins.append(min(ydata))
                 ymaxs.append(max(ydata))
                 self.plot_data[n][i].set_ydata(ydata)
@@ -302,28 +318,19 @@ class GraphFrame(wx.Frame):
             # 
             
             if self.ymin_control.is_auto():
-                ymin.append(min(ymins) - 1)
+                ymin.append(min(ymins) - 5)
             else:
                 ymin.append(int(self.ymin_control.manual_value()))
             
             if self.ymax_control.is_auto():
-                ymax.append(max(ymaxs) + 1)
+                ymax.append(max(ymaxs) + 5)
             else:
                 ymax.append(int(self.ymax_control.manual_value()))        
 
 
             # Set x and y bounds for each plot
-            self.axes[n].set_xbound(lower=dt.datetime.fromtimestamp(xmin[n]), 
-                                    upper=dt.datetime.fromtimestamp(xmax[n]))
             self.axes[n].set_ybound(lower=ymin[n], upper=ymax[n])
 
-            # self.axes[n].xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%Y'))
-            # self.axes[n].xaxis.set_major_locator(mdates.MinuteLocator())
-            # self.axes[n].xaxis.set_minor_formatter(mdates.DateFormatter('%H:%M:%S'))
-            # self.axes[n].xaxis.set_minor_locator(mdates.SecondLocator(interval=10))
-
-            # pylab.setp(self.axes[n].get_xticklabels(), fontsize=8)
-            # pylab.setp(self.axes[n].get_yticklabels(), fontsize=8)
 
 
         self.fig.autofmt_xdate()
