@@ -222,7 +222,9 @@ class GraphFrame(wx.Frame):
                                                                 np.arange(10),
                                                                 linewidth=1,
                                                                 label=labels[n][i],
-                                                                color=(1, 1, 0),  #let it auto-select colors
+                                                                color=plotColors[i],
+                                                                marker='',
+                                                                linestyle='-',
                                                                 )[0])
             self.axes[n].legend(loc='best',fontsize=6,ncol=3,)
         self.plot_index = 0
@@ -326,8 +328,7 @@ class GraphFrame(wx.Frame):
             self.axes[n].set_xbound(lower=dt.datetime.fromtimestamp(xmin[n]), 
                                     upper=dt.datetime.fromtimestamp(xmax[n]))
             self.axes[n].set_ybound(lower=ymin[n], upper=ymax[n])
-            for i in range(self.data[n].shape[0]):
-                self.plot_data[n][i].color = plotColors[i]
+
 
         self.fig.autofmt_xdate()
         self.canvas.draw()
