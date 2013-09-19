@@ -319,11 +319,14 @@ class GraphFrame(wx.Frame):
                 ymax.append(max(ymaxs) + 1)
             else:
                 ymax.append(int(self.ymax_control.manual_value()))        
+
             self.axes[n].xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%Y'))
             self.axes[n].xaxis.set_major_locator(mdates.DayLocator())
             self.axes[n].set_xbound(lower=dt.datetime.fromtimestamp(xmin[n]), 
                                     upper=dt.datetime.fromtimestamp(xmax[n]))
             self.axes[n].set_ybound(lower=ymin[n], upper=ymax[n])
+            self.axes[n].set_default_color_cycle()
+
         self.fig.autofmt_xdate()
         self.canvas.draw()
     
