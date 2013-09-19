@@ -205,9 +205,8 @@ class GraphFrame(wx.Frame):
         for n in range(self.numplots):
             self.axes.append(self.fig.add_subplot(1,self.numplots,n+1))
             self.axes[n].set_title('SAS Temperature Data ' + str(n), size=12)
-            print type(self.axes[n])
-            # pylab.setp(self.axes[n].get_xticklabels(), fontsize=8)
-            # pylab.setp(self.axes[n].get_yticklabels(), fontsize=8)
+            pylab.setp(self.axes[n].get_xticklabels(), fontsize=8)
+            pylab.setp(self.axes[n].get_yticklabels(), fontsize=8)
 
         # plot the data as a line series, and save the reference 
         # to the plotted line series
@@ -248,19 +247,8 @@ class GraphFrame(wx.Frame):
             ymins = []
             ymaxs = []
 
-            #if self.plot_choice_control.is_auto():
-                #if len(self.data[n]) > 1: 
-                    #self.plot_index = (self.plot_index+1) % len(self.data[n][0,:]);
             self.axes[n].set_title(self.plotTitles[n], size=12)
-            #else:
-                #self.plot_index = int(self.plot_choice_control.manual_value())
-                #self.axes[n].set_title('SAS Temperature Data ' + str(self.plot_index), size=12)
 
-            # anecdote: axes.grid assumes b=True if any other flag is
-            # given even if b is set to False.
-            # so just passing the flag into the first statement won't
-            # work.
-            #
             if self.cb_grid.IsChecked():
                 self.axes[n].grid(True, color='gray')
             else:
@@ -325,6 +313,8 @@ class GraphFrame(wx.Frame):
 
             self.axes[n].xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%Y'))
             self.axes[n].xaxis.set_major_locator(mdates.DayLocator())
+            self.axes[n].xaxis.set_minor_locator(mdates.DateFormatter('%h/%m/%s'))
+            self.axes[n].xaxis.set_minor_locator(mdates.MinuteLocator(interval=10))
             self.axes[n].set_xbound(lower=dt.datetime.fromtimestamp(xmin[n]), 
                                     upper=dt.datetime.fromtimestamp(xmax[n]))
             self.axes[n].set_ybound(lower=ymin[n], upper=ymax[n])
