@@ -29,7 +29,7 @@ import wx
 
 REFRESH_INTERVAL_MS = 500
 RECORD_LENGTH_MAX = 100000
-
+plotColors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
 # The recommended way to use wx with mpl is with the WXAgg
 # backend. 
 #
@@ -205,6 +205,7 @@ class GraphFrame(wx.Frame):
         for n in range(self.numplots):
             self.axes.append(self.fig.add_subplot(1,self.numplots,n+1))
             self.axes[n].set_title('SAS Temperature Data ' + str(n), size=12)
+            print type(self.axes[n])
             # pylab.setp(self.axes[n].get_xticklabels(), fontsize=8)
             # pylab.setp(self.axes[n].get_yticklabels(), fontsize=8)
 
@@ -221,7 +222,7 @@ class GraphFrame(wx.Frame):
                                                                 np.arange(10),
                                                                 linewidth=1,
                                                                 label=labels[n][i],
-                                                                #color=(1, 1, 0),  #let it auto-select colors
+                                                                color=(1, 1, 0),  #let it auto-select colors
                                                                 )[0])
             self.axes[n].legend(loc='best',fontsize=6,ncol=3,)
         self.plot_index = 0
@@ -299,7 +300,7 @@ class GraphFrame(wx.Frame):
                 ymins.append(min(ydata))
                 ymaxs.append(max(ydata))
                 self.plot_data[n][i].set_ydata(ydata)
-                 
+                
 
     
             # for ymin and ymax, find the minimal and maximal values
@@ -325,7 +326,8 @@ class GraphFrame(wx.Frame):
             self.axes[n].set_xbound(lower=dt.datetime.fromtimestamp(xmin[n]), 
                                     upper=dt.datetime.fromtimestamp(xmax[n]))
             self.axes[n].set_ybound(lower=ymin[n], upper=ymax[n])
-            self.axes[n].set_default_color_cycle()
+            for i in range(self.data[n].shape[0]):
+                self.plot_data[n][i].color = plotColors[i]
 
         self.fig.autofmt_xdate()
         self.canvas.draw()
