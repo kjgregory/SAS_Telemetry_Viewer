@@ -47,6 +47,56 @@ from dateutil import rrule
 #Data comes from here
 from SAS_TM_Parser import SAS_TM_Parser as DataGen
 
+class BoundControlBox(wx.Panel):
+    """ A static box with a couple of radio buttons and a text
+        box. Allows to switch between an automatic mode and a 
+        manual mode with an associated value.
+    """
+    def __init__(self, parent, ID, label, initValue):
+        wx.Panel.__init__(self, parent, ID)
+        
+        self.value = initValue
+        
+        box = wx.StaticBox(self, -1, label)
+        sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
+        
+        self.radio_auto = wx.RadioButton(self, -1, 
+            label="Auto", style=wx.RB_GROUP)
+        self.radio_manual = wx.RadioButton(self, -1,
+            label="Manual")
+        self.manual_text = wx.TextCtrl(self, -1, 
+            size=(35,-1),
+            value=str(initValue),
+            style=wx.TE_PROCESS_ENTER)
+
+        self.Bind(wx.EVT_UPDATE_UI, self.on_update_manual_text, self.manual_text)
+        self.Bind(wx.EVT_TEXT_ENTER, self.on_text_enter, self.manual_text)
+        
+        radio_box = wx.BoxSizer(wx.VERTICAL)
+        radio_box.Add(self.radio_auto, flag=wx.HORIZONTAL)
+        radio_box.Add(self.radio_manual, flag=wx.HORIZONTAL)
+
+        text_box = wx.BoxSizer(wx.HORIZONTAL)
+        text_box.Add(self.manual_text, flag=wx.LEFT)
+        
+        sizer.Add(radio_box, 0, wx.ALL, 10)
+        sizer.Add(text_box, 0, wx.ALL, 10)
+        
+        self.SetSizer(sizer)
+        sizer.Fit(self)
+    
+    def on_update_manual_text(self, event):
+        self.manual_text.Enable(self.radio_manual.GetValue())
+    
+    def on_text_enter(self, event):
+        self.value = self.manual_text.GetValue()
+    
+    def is_auto(self):
+        return self.radio_auto.GetValue()
+        
+    def manual_value(self):
+        return self.value
+
 class DataBoundControlBox(wx.Panel):
     """ A static box with a couple of radio buttons and a text
         box. Allows to switch between an automatic mode and a 
@@ -79,13 +129,13 @@ class DataBoundControlBox(wx.Panel):
         self.Bind(wx.EVT_TEXT_ENTER, self.on_text_enter, self.min_text)
         self.Bind(wx.EVT_TEXT_ENTER, self.on_text_enter, self.max_text)
         
-        radio_box = wx.BoxSizer(wx.HORIZONTAL)
+        radio_box = wx.BoxSizer(wx.VERTICAL)
         radio_box.Add(self.radio_auto, flag=wx.HORIZONTAL)
         radio_box.Add(self.radio_manual, flag=wx.HORIZONTAL)
 
         text_box = wx.BoxSizer(wx.HORIZONTAL)
         text_box.Add(self.min_text, flag=wx.LEFT)
-        text_box.AddSpacer(12)
+        text_box.AddSpacer(24)
         text_box.Add(self.max_text, flag=wx.RIGHT)
         
         sizer.Add(radio_box, 0, wx.ALL, 10)
@@ -162,11 +212,11 @@ class GraphFrame(wx.Frame):
         self.init_plot()
         self.canvas = FigCanvas(self.panel, -1, self.fig)
 
-        self.xbound_control = DataBoundControlBox(self.panel, -1, "X Bounds", 0, 50)
+        self.xbound_control = BoundControlBox(self.panel, -1, "History (min)", 0)
 
         self.ybound_control = []
         for n in range(self.numplots):
-            self.ybound_control.append(DataBoundControlBox(self.panel, -1, self.plotTitles[n] + " Y Bounds", 0, 100))
+            self.ybound_control.append(DataBoundControlBox(self.panel, -1, self.plotTitles[n] + " Y Bounds", 20, 60))
 
         self.pause_button = wx.Button(self.panel, -1, "Pause")
         self.Bind(wx.EVT_BUTTON, self.on_pause_button, self.pause_button)
@@ -290,8 +340,8 @@ class GraphFrame(wx.Frame):
                 xmax.append(max(xmaxs))
                 xmin.append(min(xmins))
             else:
-                xmax.append(int(self.xbound_control.min_value()))
-                xmin.append(self.xbound_control.max_value())
+                xmax.append(max(xmaxs))
+                xmin.append(xmax[n] - 60*float(self.xbound_control.manual_value()))
 
 
             # Set bounds on x axis
