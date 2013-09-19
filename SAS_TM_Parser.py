@@ -177,7 +177,7 @@ class SAS_TM_Parser(object):
                     self.rawpacket, addr = self.sock.recvfrom(1024)
                 except:
                     print "Timeout on socket"
-                    break
+                    continue
                 length = len(self.rawpacket)
                 # print "Got a packet of length ", length
                 valid = self.packet.read(self.rawpacket)
@@ -213,7 +213,7 @@ class SAS_TM_Parser(object):
                             for c in range(len(self.timestamps[n])):
                                 self.fullOfData &= (self.timestamps[n][c] != 0)
                         if self.fullOfData:
-                            sys.stdout.write( " done!")
+                            sys.stdout.write( " done!\n")
                             sys.stdout.flush()
                         else:
                              sys.stdout.write("\r")

@@ -196,12 +196,13 @@ class GraphFrame(wx.Frame):
 
     def init_plot(self):
         self.dpi = 100
-        self.fig = Figure((3.0, 3.0), dpi=self.dpi)
+#        self.fig = Figure((3.0, 3.0), dpi=self.dpi)
+        self.fig = Figure(dpi=self.dpi)
         self.axes = []
         
         for n in range(self.numplots):
-            self.axes.append(self.fig.add_subplot(1,self.numplots,n))
-            self.axes[n].set_title('SAS Temperature Data', size=12)
+            self.axes.append(self.fig.add_subplot(1,self.numplots,n+1))
+            self.axes[n].set_title('SAS Temperature Data ' + str(n), size=12)
             pylab.setp(self.axes[n].get_xticklabels(), fontsize=8)
             pylab.setp(self.axes[n].get_yticklabels(), fontsize=8)
 
@@ -218,7 +219,7 @@ class GraphFrame(wx.Frame):
                                                      label=labels[n][i],
                                                      #color=(1, 1, 0),  #let it auto-select colors
                                                      )[0])
-            self.axes[n].legend(loc='best',fontsize=6,ncol=6)
+            self.axes[n].legend(loc='best',fontsize=6,ncol=3,)
         self.plot_index = 0
 
     def draw_plot(self):
@@ -243,7 +244,7 @@ class GraphFrame(wx.Frame):
             #if self.plot_choice_control.is_auto():
                 #if len(self.data[n]) > 1: 
                     #self.plot_index = (self.plot_index+1) % len(self.data[n][0,:]);
-            self.axes[n].set_title(self.plotTitles[n], size=12)
+# self.axes[n].set_title(self.plotTitles[n], size=12)
             #else:
                 #self.plot_index = int(self.plot_choice_control.manual_value())
                 #self.axes[n].set_title('SAS Temperature Data ' + str(self.plot_index), size=12)
