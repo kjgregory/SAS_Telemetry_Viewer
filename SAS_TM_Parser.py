@@ -17,7 +17,7 @@ last_received = ''
 timer = 0
 sock_timeout = 10
 sas_timeout = 20
-port = 2003
+port = 1337
 
 class heroesHeader:
     def __init__(self):
@@ -56,7 +56,7 @@ class heroesPacket:
     def read(self, rawpacket):
         valid = self.header.read(rawpacket)
         self.payload = rawpacket[16:]
-        return vaild
+        return valid
 
 
 class sasPacket(heroesPacket):
