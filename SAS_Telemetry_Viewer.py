@@ -27,7 +27,7 @@ import os
 import sys
 import wx
 
-REFRESH_INTERVAL_MS = 500
+REFRESH_INTERVAL_MS = 800
 RECORD_LENGTH_MAX = 10000
 plotColors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
 # The recommended way to use wx with mpl is with the WXAgg
@@ -267,7 +267,7 @@ class GraphFrame(wx.Frame):
         self.axes = []
         
         for n in range(self.numplots):
-            self.axes.append(self.fig.add_subplot(1,self.numplots,n+1))
+            self.axes.append(self.fig.add_subplot(self.numplots,1,n+1))
             self.axes[n].set_title('SAS Temperature Data ' + str(n), size=12)
             pylab.setp(self.axes[n].get_xticklabels(), fontsize=8)
             pylab.setp(self.axes[n].get_yticklabels(), fontsize=8)
