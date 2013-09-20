@@ -56,7 +56,7 @@ class heroesPacket:
     def read(self, rawpacket):
         valid = self.header.read(rawpacket)
         self.payload = rawpacket[16:]
-        return vaild
+        return valid
 
 
 class sasPacket(heroesPacket):

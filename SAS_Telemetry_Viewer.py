@@ -27,7 +27,7 @@ import os
 import sys
 import wx
 
-REFRESH_INTERVAL_MS = 500
+REFRESH_INTERVAL_MS = 250
 RECORD_LENGTH_MAX = 10000
 plotColors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
 # The recommended way to use wx with mpl is with the WXAgg
@@ -212,7 +212,7 @@ class GraphFrame(wx.Frame):
         self.init_plot()
         self.canvas = FigCanvas(self.panel, -1, self.fig)
 
-        self.xbound_control = BoundControlBox(self.panel, -1, "History (min)", 0)
+        self.xbound_control = BoundControlBox(self.panel, -1, "History (min)", 10)
 
         self.ybound_control = []
         for n in range(self.numplots):
@@ -396,7 +396,6 @@ class GraphFrame(wx.Frame):
 
         self.fig.autofmt_xdate()
         self.canvas.draw()
-    
     def on_pause_button(self, event):
         self.paused = not self.paused
     
