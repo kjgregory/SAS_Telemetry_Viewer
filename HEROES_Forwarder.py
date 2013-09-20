@@ -35,8 +35,10 @@ while True:
                 data = data[k:len(data)]
                 
                 if (packet.read(rawPacket)):
-                    # print hex(packet.header.source), packet.header.payloadLength
                     udp_sock.sendto(rawPacket, (UDP_IP, UDP_PORT))
+                    forwarded += 1
+                    sys.stdout.write("Forwarded packets: " + str(forwarded) + "\r")
+                    sys.stdout.flush()
                     
     time.sleep(.01)
 tcp_sock.close()

@@ -170,6 +170,7 @@ class SAS_TM_Parser(object):
         startTime = t.time()
         if self.validsocket:
             while True:
+                t.sleep(.01)
                 if (t.time() - startTime) > self.sasTimeout:
                     print "Timeout waiting for SAS HK packet"
                     break
