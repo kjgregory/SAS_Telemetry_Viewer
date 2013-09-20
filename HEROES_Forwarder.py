@@ -2,6 +2,8 @@
  
 import socket
 import struct
+import time
+import sys
 from SAS_TM_Parser import heroesPacket
  
 TCP_IP = '192.168.0.100'
@@ -22,7 +24,7 @@ print "connected to", TCP_IP, ":", TCP_PORT
 
 data = ''
 packet = heroesPacket()
-
+forwarded = 0
 while True:
     data += tcp_sock.recv(BUFFER_SIZE)
     for k in range(len(data)-1):
@@ -31,9 +33,13 @@ while True:
             if (word[0] == 0xc39a):
                 rawPacket = data[0:k]
                 data = data[k:len(data)]
+                
                 if (packet.read(rawPacket)):
                     udp_sock.sendto(rawPacket, (UDP_IP, UDP_PORT))
+                    forwarded += 1
+                    sys.stdout.write("Forwarded packets: " + str(forwarded) + "\r")
+                    sys.stdout.flush()
                     
-
-s.close()
+    time.sleep(.01)
+tcp_sock.close()
 

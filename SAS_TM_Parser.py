@@ -15,9 +15,9 @@ import sys
 
 last_received = ''
 timer = 0
-sock_timeout = 10
-sas_timeout = 20
-port = 2003
+sock_timeout = 5
+sas_timeout = 60
+port = 1337
 
 class heroesHeader:
     def __init__(self):
@@ -170,6 +170,7 @@ class SAS_TM_Parser(object):
         startTime = t.time()
         if self.validsocket:
             while True:
+                t.sleep(.01)
                 if (t.time() - startTime) > self.sasTimeout:
                     print "Timeout waiting for SAS HK packet"
                     break
