@@ -1,5 +1,6 @@
 from SAS_TM_Parser import SAS_TM_Parser as parser
 import numpy as np
+import time
 import datetime as YES
 sock = parser()
 labels = sock.labels
@@ -14,3 +15,4 @@ while True:
     for plot in range (len(data)):
         for channel in range(len(data[plot])):
             print "@", YES.datetime.fromtimestamp(time[plot][channel]), ": ", data[plot][channel]
+    time.wait(.1)
