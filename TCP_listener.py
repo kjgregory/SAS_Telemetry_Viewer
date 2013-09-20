@@ -4,7 +4,7 @@ import socket
 import struct
 from SAS_TM_Parser import heroesPacket
  
-TCP_IP = '192.168.0.100'
+TCP_IP = '127.0.0.1'
 TCP_PORT = 8000
 BUFFER_SIZE = 2048
  
