@@ -28,54 +28,59 @@ import sys
 import wx
 
 REFRESH_INTERVAL_MS = 500
-RECORD_LENGTH_MAX = 100000
-
+RECORD_LENGTH_MAX = 10000
+plotColors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
 # The recommended way to use wx with mpl is with the WXAgg
 # backend. 
 #
 import matplotlib
 matplotlib.use('WXAgg')
+import matplotlib.dates as mdates
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import \
     FigureCanvasWxAgg as FigCanvas, \
     NavigationToolbar2WxAgg as NavigationToolbar
 import numpy as np
 import pylab
+import datetime as dt
+from dateutil import rrule
 #Data comes from here
 from SAS_TM_Parser import SAS_TM_Parser as DataGen
-
 
 class BoundControlBox(wx.Panel):
     """ A static box with a couple of radio buttons and a text
         box. Allows to switch between an automatic mode and a 
         manual mode with an associated value.
     """
-    def __init__(self, parent, ID, label, initval):
+    def __init__(self, parent, ID, label, initValue):
         wx.Panel.__init__(self, parent, ID)
         
-        self.value = initval
+        self.value = initValue
         
         box = wx.StaticBox(self, -1, label)
         sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
         
         self.radio_auto = wx.RadioButton(self, -1, 
-            label="Auto", style=wx.RB_GROUP)
+            label="Full", style=wx.RB_GROUP)
         self.radio_manual = wx.RadioButton(self, -1,
-            label="Manual")
+            label="Window")
         self.manual_text = wx.TextCtrl(self, -1, 
             size=(35,-1),
-            value=str(initval),
+            value=str(initValue),
             style=wx.TE_PROCESS_ENTER)
-        
+
         self.Bind(wx.EVT_UPDATE_UI, self.on_update_manual_text, self.manual_text)
         self.Bind(wx.EVT_TEXT_ENTER, self.on_text_enter, self.manual_text)
         
-        manual_box = wx.BoxSizer(wx.HORIZONTAL)
-        manual_box.Add(self.radio_manual, flag=wx.ALIGN_CENTER_VERTICAL)
-        manual_box.Add(self.manual_text, flag=wx.ALIGN_CENTER_VERTICAL)
+        radio_box = wx.BoxSizer(wx.VERTICAL)
+        radio_box.Add(self.radio_auto, flag=wx.HORIZONTAL)
+        radio_box.Add(self.radio_manual, flag=wx.HORIZONTAL)
+
+        text_box = wx.BoxSizer(wx.HORIZONTAL)
+        text_box.Add(self.manual_text, flag=wx.LEFT)
         
-        sizer.Add(self.radio_auto, 0, wx.ALL, 10)
-        sizer.Add(manual_box, 0, wx.ALL, 10)
+        sizer.Add(radio_box, 0, wx.ALL, 10)
+        sizer.Add(text_box, 0, wx.ALL, 10)
         
         self.SetSizer(sizer)
         sizer.Fit(self)
@@ -92,6 +97,70 @@ class BoundControlBox(wx.Panel):
     def manual_value(self):
         return self.value
 
+class DataBoundControlBox(wx.Panel):
+    """ A static box with a couple of radio buttons and a text
+        box. Allows to switch between an automatic mode and a 
+        manual mode with an associated value.
+    """
+    def __init__(self, parent, ID, label, initMin, initMax):
+        wx.Panel.__init__(self, parent, ID)
+        
+        self.minValue = initMin
+        self.maxValue = initMax
+        
+        box = wx.StaticBox(self, -1, label)
+        sizer = wx.StaticBoxSizer(box, wx.VERTICAL)
+        
+        self.radio_auto = wx.RadioButton(self, -1, 
+            label="Auto", style=wx.RB_GROUP)
+        self.radio_manual = wx.RadioButton(self, -1,
+            label="Manual")
+        self.min_text = wx.TextCtrl(self, -1, 
+            size=(35,-1),
+            value=str(initMin),
+            style=wx.TE_PROCESS_ENTER)
+        self.max_text = wx.TextCtrl(self, -1, 
+            size=(35,-1),
+            value=str(initMax),
+            style=wx.TE_PROCESS_ENTER)
+        
+        self.Bind(wx.EVT_UPDATE_UI, self.on_update_manual_text, self.min_text)
+        self.Bind(wx.EVT_UPDATE_UI, self.on_update_manual_text, self.max_text)
+        self.Bind(wx.EVT_TEXT_ENTER, self.on_text_enter, self.min_text)
+        self.Bind(wx.EVT_TEXT_ENTER, self.on_text_enter, self.max_text)
+        
+        radio_box = wx.BoxSizer(wx.VERTICAL)
+        radio_box.Add(self.radio_auto, flag=wx.HORIZONTAL)
+        radio_box.Add(self.radio_manual, flag=wx.HORIZONTAL)
+
+        text_box = wx.BoxSizer(wx.HORIZONTAL)
+        text_box.Add(self.min_text, flag=wx.LEFT)
+        text_box.AddSpacer(24)
+        text_box.Add(self.max_text, flag=wx.RIGHT)
+        
+        sizer.Add(radio_box, 0, wx.ALL, 10)
+        sizer.Add(text_box, 0, wx.ALL, 10)
+        
+        self.SetSizer(sizer)
+        sizer.Fit(self)
+    
+    def on_update_manual_text(self, event):
+        self.min_text.Enable(self.radio_manual.GetValue())
+        self.max_text.Enable(self.radio_manual.GetValue())
+    
+    def on_text_enter(self, event):
+        self.minValue = self.min_text.GetValue()
+        self.maxValue = self.max_text.GetValue()
+    
+    def is_auto(self):
+        return self.radio_auto.GetValue()
+        
+    def min_value(self):
+        return self.minValue
+
+    def max_value(self):
+        return self.maxValue
+
 
 class GraphFrame(wx.Frame):
     """ The main frame of the application
@@ -102,20 +171,17 @@ class GraphFrame(wx.Frame):
         wx.Frame.__init__(self, None, -1, self.title)
         
         self.datagen = DataGen()
-        data = self.datagen.next()
-        
-        self.data = data;
-        #if isinstance(data, np.ndarray):
-            #self.data = data
-        #else: 
-            #self.data = [100]
-            
-            
-        data = self.datagen.next()
-        for n in range(len(self.data)):
-            self.data[n] = np.vstack((self.data[n], data[n]))
+        self.data = []
+        self.time = []
+        data, time = self.datagen.next()
+        for n in range(len(data)):
+            newData = (np.array(data[n], ndmin=2)).transpose()
+            newTime = (np.array(time[n], ndmin=2)).transpose()
+            self.data.append(newData)
+            self.time.append(newTime)
         
         self.numplots = len(self.datagen.labels)
+        self.plotTitles = self.datagen.titles
         
         self.paused = False
         
@@ -146,12 +212,11 @@ class GraphFrame(wx.Frame):
         self.init_plot()
         self.canvas = FigCanvas(self.panel, -1, self.fig)
 
-        self.xmin_control = BoundControlBox(self.panel, -1, "X min", 0)
-        self.xmax_control = BoundControlBox(self.panel, -1, "X max", 50)
-        self.ymin_control = BoundControlBox(self.panel, -1, "Y min", 0)
-        self.ymax_control = BoundControlBox(self.panel, -1, "Y max", 100)
-        self.plot_choice_control = BoundControlBox(self.panel, -1, "Sensor", 0)
-        self.alarm_control = BoundControlBox(self.panel, -1, "Alarm", -30)
+        self.xbound_control = BoundControlBox(self.panel, -1, "History (min)", 0)
+
+        self.ybound_control = []
+        for n in range(self.numplots):
+            self.ybound_control.append(DataBoundControlBox(self.panel, -1, self.plotTitles[n] + " Y Bounds", 20, 60))
 
         self.pause_button = wx.Button(self.panel, -1, "Pause")
         self.Bind(wx.EVT_BUTTON, self.on_pause_button, self.pause_button)
@@ -177,14 +242,13 @@ class GraphFrame(wx.Frame):
         self.hbox1.Add(self.cb_xlab, border=5, flag=wx.ALL | wx.ALIGN_CENTER_VERTICAL)
         
         self.hbox2 = wx.BoxSizer(wx.HORIZONTAL)
-        self.hbox2.Add(self.xmin_control, border=5, flag=wx.ALL)
-        self.hbox2.Add(self.xmax_control, border=5, flag=wx.ALL)
+        self.hbox2.Add(self.xbound_control, border=5, flag=wx.ALL)
+        # self.hbox2.Add(self.xmax_control, border=5, flag=wx.ALL)
         self.hbox2.AddSpacer(24)
-        self.hbox2.Add(self.ymin_control, border=5, flag=wx.ALL)
-        self.hbox2.Add(self.ymax_control, border=5, flag=wx.ALL)
-        self.hbox2.AddSpacer(24)
-        self.hbox2.Add(self.plot_choice_control, border=5, flag=wx.ALL)
-        self.hbox2.Add(self.alarm_control, border=5, flag=wx.ALL)
+        for n in range(self.numplots):
+            self.hbox2.Add(self.ybound_control[n], border=5, flag=wx.ALL)
+            self.hbox2.AddSpacer(6)
+        # self.hbox2.Add(self.ymax_control, border=5, flag=wx.ALL)
 
         self.vbox = wx.BoxSizer(wx.VERTICAL)
         self.vbox.Add(self.canvas, 1, flag=wx.LEFT | wx.TOP | wx.GROW)        
@@ -199,12 +263,12 @@ class GraphFrame(wx.Frame):
 
     def init_plot(self):
         self.dpi = 100
-        self.fig = Figure((3.0, 3.0), dpi=self.dpi)
+        self.fig = Figure(dpi=self.dpi)
         self.axes = []
         
         for n in range(self.numplots):
-            self.axes.append(self.fig.add_subplot(1,self.numplots,n))
-            self.axes[n].set_title('SAS Temperature Data', size=12)
+            self.axes.append(self.fig.add_subplot(1,self.numplots,n+1))
+            self.axes[n].set_title('SAS Temperature Data ' + str(n), size=12)
             pylab.setp(self.axes[n].get_xticklabels(), fontsize=8)
             pylab.setp(self.axes[n].get_yticklabels(), fontsize=8)
 
@@ -215,82 +279,41 @@ class GraphFrame(wx.Frame):
         labels = self.datagen.labels
         for n in range(len(self.data)):
             self.plot_data.append([])
-            for i in range(len(self.data[n])):
-                self.plot_data[n].append(self.axes[n].plot(np.arange(10),
-                                                     linewidth=1,
-                                                     label=labels[n][i],
-                                                     #color=(1, 1, 0),  #let it auto-select colors
-                                                     )[0])
-            self.axes[n].legend(loc='best',fontsize=6,ncol=6)
+            faketime = list(rrule.rrule(rrule.DAILY,count=10,dtstart=dt.datetime.utcnow()))
+            for i in range(self.data[n].shape[0]):
+                self.plot_data[n].append(self.axes[n].plot_date(faketime,
+                                                                np.arange(10),
+                                                                linewidth=1,
+                                                                label=labels[n][i],
+                                                                color=plotColors[i],
+                                                                marker='',
+                                                                linestyle='-',
+                                                                )[0])
+            self.axes[n].legend(loc='best',fontsize=6,ncol=3,)
+            # self.axes[n].xaxis.set_major_formatter(mdates.DateFormatter('%m/%d/%Y'))
+            # self.axes[n].xaxis.set_major_locator(mdates.MinuteLocator())
+            # self.axes[n].xaxis.set_minor_formatter(mdates.DateFormatter('%H:%M:%S'))
+            # self.axes[n].xaxis.set_minor_locator(mdates.SecondLocator(interval=10))
         self.plot_index = 0
 
     def draw_plot(self):
         """ Redraws the plot
         """
-        # when xmin is on auto, it "follows" xmax to produce a 
-        # sliding window effect. therefore, xmin is assigned after
-        # xmax.
-        #
+
         xmax = []
         xmin = []
-        ymins = []
-        ymaxs = []
         ymin = []
         ymax = []
-                        
+        
         for n in range(self.numplots):
-            if self.xmax_control.is_auto():
-                xmax.append(len(self.data[n]) if len(self.data[n]) > 50 else 50)
-            else:
-                xmax.append(int(self.xmax_control.manual_value()))
-                
-            if self.xmin_control.is_auto():            
-                xmin.append(xmax[n] - 100)
-            else:
-                xmin.append(self.xmin_control.manual_value())
-    
-            # for ymin and ymax, find the minimal and maximal values
-            # in the data set and add a mininal margin.
-            # 
-            # note that it's easy to change this scheme to the 
-            # minimal/maximal value in the current display, and not
-            # the whole data set.
-            # 
-            if self.ymin_control.is_auto():
-                ymins.append([])                
-                ymins[n].append(np.zeros(min(len(self.data[n]),(xmax[n]-max(xmin[n],0))),float))
-                for i in range(min(len(self.data[n]),xmax[n]-max(xmin[n],0))):
-                    print n,i,'-',len(ymins),len(ymins[n]),'-',len(xmin),'-',len(self.data),len(self.data[n])
-                    ymins[n][i] = min(self.data[n][i+max(xmin[n],0)])
-                ymin.append(min(ymins[n]) - 1)
-            else:
-                ymin.append(int(self.ymin_control.manual_value()))
-            
-            if self.ymax_control.is_auto():
-                ymaxs.append(np.zeros(min(len(self.data[n]),(xmax[n]-max(xmin[n],0))),float))
-                for i in range(min(len(self.data[n]),xmax[n]-max(xmin[n],0))):
-                    ymaxs[n][i] = max(self.data[n][i+max(xmin[n],0)])
-                ymax.append(max(ymaxs[n]) + 1)
-            else:
-                ymax.append(int(self.ymax_control.manual_value()))
-    
-            #if self.plot_choice_control.is_auto():
-                #if len(self.data[n]) > 1: 
-                    #self.plot_index = (self.plot_index+1) % len(self.data[n][0,:]);
-            self.axes[n].set_title('SAS Temperature Data', size=12)
-            #else:
-                #self.plot_index = int(self.plot_choice_control.manual_value())
-                #self.axes[n].set_title('SAS Temperature Data ' + str(self.plot_index), size=12)
-            
-    
-            self.axes[n].set_xbound(lower=xmin[n], upper=xmax[n])
-            self.axes[n].set_ybound(lower=ymin[n], upper=ymax[n])
-            
-            # anecdote: axes.grid assumes b=True if any other flag is
-            # given even if b is set to False.
-            # so just passing the flag into the first statement won't
-            # work.
-            #
+
+            xmaxs = []
+            xmins = []
+            ymins = []
+            ymaxs = []
+
+            self.axes[n].set_title(self.plotTitles[n], size=12)
+
             if self.cb_grid.IsChecked():
                 self.axes[n].grid(True, color='gray')
             else:
@@ -302,18 +325,76 @@ class GraphFrame(wx.Frame):
             #  
             pylab.setp(self.axes[n].get_xticklabels(), 
                 visible=self.cb_xlab.IsChecked())
+ 
+            xdata = []
+            for i in range(self.time[n].shape[0]):
+                if isinstance(self.time[n], np.ndarray) and self.time[n].shape[1] > 1:
+                    xdata.append( self.time[n][i,:] )
+                else:
+                    xdata.append( (self.time[n].shape[1]) )
+                xmins.append(min(xdata[i]))
+                xmaxs.append(max(xdata[i]))
+
+            # Generate xmin and xmax        
+            if self.xbound_control.is_auto():
+                xmax.append(max(xmaxs))
+                xmin.append(min(xmins))
+            else:
+                xmax.append(max(xmaxs))
+                xmin.append(xmax[n] - 60*float(self.xbound_control.manual_value()))
+
+
+            # Set bounds on x axis
+
+            self.axes[n].set_xbound(lower=dt.datetime.fromtimestamp(xmin[n]), 
+                                    upper=dt.datetime.fromtimestamp(xmax[n]))
+
+            # Determine the indicies being displayed
+            idxMin = []
+            idxMax = []
+            for i in range(self.data[n].shape[0]):
+                idxMin.append( np.searchsorted(xdata[i], xmin[n]) )
+                idxMax.append( np.searchsorted(xdata[i], xmax[n]) )
+                # print i, idxMin, idxMax, len(xdata[i])
+                # print xdata[i]
+                # print xdata[i][idxMin:idxMax]
+                self.plot_data[n][i].set_xdata(np.array([dt.datetime.fromtimestamp(x) for x in xdata[i][idxMin[i]:idxMax[i]]]))
+
+            # Generate ydata
+            for i in range(self.data[n].shape[0]):
+                if isinstance(self.data[n], np.ndarray) and self.data[n].shape[1] > 1:
+                    ydata = self.data[n][i,idxMin[i]:idxMax[i]]
+                else:
+                    ydata = np.ones(idxMax[i]-idxMin[i])
+                ymins.append(min(ydata))
+                ymaxs.append(max(ydata))
+                self.plot_data[n][i].set_ydata(ydata)
+                
+
+    
+            # for ymin and ymax, find the minimal and maximal values
+            # in the data set and add a mininal margin.
+            # 
+            # note that it's easy to change this scheme to the 
+            # minimal/maximal value in the current display, and not
+            # the whole data set.
+            # 
             
-            for i in range(len(self.data[n])):        
-                self.plot_data[n][i].set_xdata(np.arange(len(self.data[n])))
-                print len(self.data[n][i])                
-                if isinstance(self.data[n], np.ndarray) and len(self.data[n]) > 1:
-                #for i in range(len(self.data[n])):
-                    #self.plot_data.set_ydata(self.data[:,self.plot_index])
-                    self.plot_data[n][i].set_ydata(self.data[n][:,i]);
-                else: 
-                #for i in range(len(self.data[n])):
-                    self.plot_data[n][i].set_ydata(np.ones(len(self.data[n])))
-                    
+            if self.ybound_control[n].is_auto():
+                ymin.append(min(ymins) - 5)
+                ymax.append(max(ymaxs) + 5)
+            else:
+                ymin.append(int(self.ybound_control[n].min_value()))
+                ymax.append(int(self.ybound_control[n].max_value())) 
+
+
+
+            # Set x and y bounds for each plot
+            self.axes[n].set_ybound(lower=ymin[n], upper=ymax[n])
+
+
+
+        self.fig.autofmt_xdate()
         self.canvas.draw()
     
     def on_pause_button(self, event):
@@ -349,25 +430,18 @@ class GraphFrame(wx.Frame):
         # if paused do not add data, but still redraw the plot
         # (to respond to scale modifications, grid change, etc.)
         #
-        if self.alarm_control.is_auto():
-        	alarm_temp = -30
-        else:
-            alarm_temp = int(self.alarm_control.manual_value())
         if not self.paused:
-            data = self.datagen.next()
-            if isinstance(data, np.ndarray) and not isinstance(self.data, np.ndarray):
-                self.data = data
-            if isinstance(data, np.ndarray) and isinstance(self.data, np.ndarray):
-                for n in range(self.numplots):                
-                    if (len(self.data[n]) < RECORD_LENGTH_MAX):
-                        self.data[n] = np.vstack((self.data[n], data[n]))
-                        print np.size(self.data[n],1)
-                    else:
-                        self.data[n] = np.vstack((self.data[n][1:(RECORD_LENGTH_MAX)],data[n]))
-                        if np.any(data < alarm_temp):
-                            sys.stdout.write('\a')
-                            sys.stdout.flush()
-        self.draw_plot()
+            data, time = self.datagen.next()
+            for n in range(self.numplots):
+                newData = (np.array(data[n], ndmin=2)).transpose()
+                newTime = (np.array(time[n], ndmin=2)).transpose()
+                if (self.data[n].shape[1] < RECORD_LENGTH_MAX):
+                    self.data[n] = np.hstack((self.data[n], newData))
+                    self.time[n] = np.hstack((self.time[n], newTime))
+                else:
+                    self.data[n] = np.hstack((self.data[n][:,1:], newData))
+                    self.time[n] = np.hstack((self.time[n][:,1:], newTime))
+            self.draw_plot()
     
     def on_exit(self, event):
         self.Destroy()
