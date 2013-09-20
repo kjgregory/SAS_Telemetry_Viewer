@@ -27,7 +27,7 @@ import os
 import sys
 import wx
 
-REFRESH_INTERVAL_MS = 250
+REFRESH_INTERVAL_MS = 500
 RECORD_LENGTH_MAX = 10000
 plotColors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
 # The recommended way to use wx with mpl is with the WXAgg
