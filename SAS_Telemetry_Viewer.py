@@ -47,8 +47,6 @@ from dateutil import rrule
 #Data comes from here
 from SAS_TM_Parser import SAS_TM_Parser as DataGen
 
-pylab.ion()
-
 class BoundControlBox(wx.Panel):
     """ A static box with a couple of radio buttons and a text
         box. Allows to switch between an automatic mode and a 
@@ -397,8 +395,7 @@ class GraphFrame(wx.Frame):
 
 
         self.fig.autofmt_xdate()
-#        self.canvas.draw()
-        pylab.draw()
+        self.canvas.draw()
     def on_pause_button(self, event):
         self.paused = not self.paused
     

@@ -17,7 +17,7 @@ last_received = ''
 timer = 0
 sock_timeout = 10
 sas_timeout = 20
-port = 1337
+port = 2003
 
 class heroesHeader:
     def __init__(self):
